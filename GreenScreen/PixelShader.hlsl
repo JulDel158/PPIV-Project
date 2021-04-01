@@ -1,6 +1,6 @@
 
 
-(
+
 // an ultra simple hlsl pixel shader
 float4 main() : SV_TARGET 
 {	
