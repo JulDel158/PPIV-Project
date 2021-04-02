@@ -1,30 +1,27 @@
 
+Texture2D surfaceColor;
+sampler texturesmaple;
+
 cbuffer SHADER_VARS : register(b0)
 {
-    matrix w;
-    matrix v;
-    matrix p;
+    matrix worlMatrix;
+    matrix viewMatrix;
+    matrix projectionMatrix;
+
 }
-
-struct VS_INPUT
-{
-    float3 pos : POSITION;
-    float3 uvw : UWV;
-    float3 nrm : NRM;
-};
-
 struct PS_INPUT
 {
-    float3 pos : SV_POSITION;
-    float3 uvw : TEXCOORD0;
-    float3 nrm : NORMAL0;
+    float4 pos : SV_POSITION;
+    float2 uv : UV;
+    float3 normal : NORMAL;
 };
-
+    
 // an ultra simple hlsl pixel shader
-float4 main(VS_INPUT input) : SV_TARGET 
+float4 main(PS_INPUT input) : SV_Target
 {	
-    PS_INPUT output = input;
-	return float4(0.25f,0.0f,1.0f,0); 
+    float4 sColor = surfaceColor.Sample(texturesmaple, input.uv);
+    input.normal = normalize(input.normal);
+    return sColor;
 }
 
 
