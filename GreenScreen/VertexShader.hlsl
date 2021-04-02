@@ -2,7 +2,6 @@
 // Simple Vertex Shader
 
 // by default HLSL is COLUMN major
-// 
 //constant buffer
 cbuffer SHADER_VARS
 {
@@ -11,18 +10,31 @@ cbuffer SHADER_VARS
 	matrix p;
 }
 
-// an ultra simple hlsl vertex shader
-float4 main(float3 local_pos : POSITION,
-			float3 local_uvw : UVW,
-			float3 local_nrm : NRM) : SV_POSITION
+struct VS_INPUT
 {
-	float4 proj_pos = float4(local_pos, 1);
-	// do w * v * p
-	proj_pos = mul(w, proj_pos);
-	proj_pos = mul(v, proj_pos);
-	proj_pos = mul(p, proj_pos);
+    float3 pos : POSITION;
+    float3 uvw : UWV;
+    float3 nrm : NRM;
+};
 
-	return proj_pos;
+struct PS_INPUT
+{
+    float3 pos : SV_POSITION;
+    float3 uvw : TEXCOORD0;
+    float3 nrm : NORMAL0;
+};
+
+// an ultra simple hlsl vertex shader
+PS_INPUT main(VS_INPUT input)
+{
+    PS_INPUT output = (PS_INPUT) 0;
+    output.pos = input.pos;
+	// do w * v * p
+	output.pos = mul(w, input.pos);
+    output.pos = mul(v, output.pos);
+    output.pos = mul(p, output.pos);
+
+	return output;
 }
 
 

@@ -4,6 +4,24 @@
 #include "test_pyramid.h"
 #pragma comment(lib, "d3dcompiler.lib")
 
+//basic file loader (3DCC REFERENCE)
+std::vector<uint8_t> loadBlob(const char* filename)
+{
+	std::vector<uint8_t> blob;
+	std::fstream file{ filename, std::ios_base::in | std::ios_base::binary };
+
+	if (file.is_open())
+	{
+		file.seekg(0, std::ios_base::end);
+		blob.resize(file.tellg());
+		file.seekg(0, std::ios_base::beg);
+		file.read((char*)blob.data(), blob.size());
+		file.close();
+	}
+
+	return std::move(blob);
+}
+
 // Creation, Rendering & Cleanup
 class Renderer
 {
@@ -13,9 +31,11 @@ class Renderer
 	// what we need at a minimum to draw a triangle
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		vertexBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		indexBuffer;
+	//Shaders
 	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vertexShader;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pixelShader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
+
 	// world view proj
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
 	struct SHADER_VARS
@@ -30,25 +50,31 @@ class Renderer
 
 
 public:
+
+	HRESULT CreateBuffers(ID3D11Device* device)
+	{
+		HRESULT hr = S_OK;
+		// Create Vertex Buffer
+		D3D11_SUBRESOURCE_DATA bData = { test_pyramid_data, 0, 0 };
+		CD3D11_BUFFER_DESC bDesc(sizeof(test_pyramid_data), D3D11_BIND_VERTEX_BUFFER);
+		hr = device->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
+
+		// create Index Buffer
+		D3D11_SUBRESOURCE_DATA iData = { test_pyramid_indicies, 0, 0 };
+		CD3D11_BUFFER_DESC iDesc(sizeof(test_pyramid_indicies), D3D11_BIND_INDEX_BUFFER);
+		hr = device->CreateBuffer(&iDesc, &iData, indexBuffer.GetAddressOf());
+
+		return hr;
+	}
+
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 	{
 		win = _win;
 		d3d = _d3d;
 		ID3D11Device* creator;
 		d3d.GetDevice((void**)&creator);
-		// Create Vertex Buffer
-		/*float verts[] = {
-			   0,   0.5f,
-			 0.5f, -0.5f,
-			-0.5f, -0.5f
-		};*/
-		D3D11_SUBRESOURCE_DATA bData = { test_pyramid_data, 0, 0 };
-		CD3D11_BUFFER_DESC bDesc(sizeof(test_pyramid_data), D3D11_BIND_VERTEX_BUFFER);
-		creator->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
-		// create index
-		D3D11_SUBRESOURCE_DATA iData = { test_pyramid_indicies, 0, 0 };
-		CD3D11_BUFFER_DESC iDesc(sizeof(test_pyramid_indicies), D3D11_BIND_INDEX_BUFFER);
-		creator->CreateBuffer(&iDesc, &iData, indexBuffer.GetAddressOf());
+		
+		CreateBuffers(creator);
 		
 		// Create Vertex Shader
 		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
@@ -56,31 +82,15 @@ public:
 		compilerFlags |= D3DCOMPILE_DEBUG;
 #endif
 		Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, errors;
-		if (SUCCEEDED(D3DCompile(vertexShaderSource, strlen(vertexShaderSource),
-			nullptr, nullptr, nullptr, "main", "vs_4_0", compilerFlags, 0, 
-			vsBlob.GetAddressOf(), errors.GetAddressOf())))
-		{
-			creator->CreateVertexShader(vsBlob->GetBufferPointer(),
-				vsBlob->GetBufferSize(), nullptr, vertexShader.GetAddressOf());
-		}
-		else
-			std::cout << (char*)errors->GetBufferPointer() << std::endl;
-		// Create Pixel Shader
-		Microsoft::WRL::ComPtr<ID3DBlob> psBlob; errors.Reset();
-		if (SUCCEEDED(D3DCompile(pixelShaderSource, strlen(pixelShaderSource),
-			nullptr, nullptr, nullptr, "main", "ps_4_0", compilerFlags, 0, 
-			psBlob.GetAddressOf(), errors.GetAddressOf())))
-		{
-			creator->CreatePixelShader(psBlob->GetBufferPointer(),
-				psBlob->GetBufferSize(), nullptr, pixelShader.GetAddressOf());
-		}
-		else
-			std::cout << (char*)errors->GetBufferPointer() << std::endl;
+		std::vector<uint8_t> blob = loadBlob("VertexShader.h");
+		creator->CreateVertexShader(blob.data(), blob.size(), nullptr,
+			vertexShader.ReleaseAndGetAddressOf());
+
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
-			{ 
-				"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 
-				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 
+			{
+				"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
 			},
 			{
 				"UVW", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
@@ -91,10 +101,42 @@ public:
 				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
 			}
 		};
-		creator->CreateInputLayout(format, ARRAYSIZE(format), 
-			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), 
-			vertexFormat.GetAddressOf());
+		creator->CreateInputLayout(format, ARRAYSIZE(format), blob.data(),
+			blob.size(), vertexFormat.ReleaseAndGetAddressOf());
 
+		blob = loadBlob("PixelShader.h");
+		creator->CreatePixelShader(blob.data(), blob.size(), nullptr,
+			pixelShader.ReleaseAndGetAddressOf());
+
+
+		/*if (SUCCEEDED(D3DCompile(vertexShaderSource, strlen(vertexShaderSource),
+			nullptr, nullptr, nullptr, "main", "vs_4_0", compilerFlags, 0, 
+			vsBlob.GetAddressOf(), errors.GetAddressOf())))
+		{
+			creator->CreateVertexShader(vsBlob->GetBufferPointer(),
+			vsBlob->GetBufferSize(), nullptr, vertexShader.GetAddressOf());
+		}
+		else
+			std::cout << (char*)errors->GetBufferPointer() << std::endl;*/
+
+		// Create Pixel Shader
+		/*Microsoft::WRL::ComPtr<ID3DBlob> psBlob; errors.Reset();
+		if (SUCCEEDED(D3DCompile(pixelShaderSource, strlen(pixelShaderSource),
+			nullptr, nullptr, nullptr, "main", "ps_4_0", compilerFlags, 0, 
+			psBlob.GetAddressOf(), errors.GetAddressOf())))
+		{
+			creator->CreatePixelShader(psBlob->GetBufferPointer(),
+				psBlob->GetBufferSize(), nullptr, pixelShader.GetAddressOf());
+		}
+		else
+			std::cout << (char*)errors->GetBufferPointer() << std::endl;*/
+
+		
+		/*creator->CreateInputLayout(format, ARRAYSIZE(format), 
+			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), 
+			vertexFormat.GetAddressOf());*/
+
+		
 		//init math stuff
 		m.Create();
 		m.LookAtLHF(GW::MATH::GVECTORF{ 0.5f, 1.0f, -2.0f }, //eye
