@@ -38,11 +38,14 @@ int main()
 				IDXGISwapChain* swap;
 				ID3D11DeviceContext* con;
 				ID3D11RenderTargetView* view;
+
+
 				if (+d3d11.GetImmediateContext((void**)&con) &&
 					+d3d11.GetRenderTargetView((void**)&view) &&
 					+d3d11.GetSwapchain((void**)&swap))
 				{
 					con->ClearRenderTargetView(view, clr);
+
 					renderer.Render();
 					swap->Present(1, 0);
 					// release incremented COM reference counts
