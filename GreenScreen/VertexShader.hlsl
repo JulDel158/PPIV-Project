@@ -14,14 +14,14 @@ struct VS_INPUT
 {
     float4 pos : POSITION0;
     float3 uvw : TEXCOORD0;
-    float3 nrm : NORMAL0;
+    float3 nrm : NORMAL;
 };
 
 struct PS_INPUT
 {
     float4 pos : SV_POSITION;
-    float3 uvw : TEXCOORD0;
-    float3 nrm : NORMAL0;
+    float3 uvw : TEXCOORD1;
+    float3 nrm : NORMAL;
 };
 
 // an ultra simple hlsl vertex shader
