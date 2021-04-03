@@ -23,7 +23,6 @@ class Renderer
 	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
 
-
 	// world view proj
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
 	struct SHADER_VARS

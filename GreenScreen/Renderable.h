@@ -48,9 +48,9 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> sResourceView = nullptr;
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState = nullptr;
 
-	HRESULT CreateBuffers(ID3D11Device* device, vector<int>& indices, float* vertices, int vertexSize, int vertexCount)
+	// creates vertex and index buffers using mesh data
+	void CreateBuffers(ID3D11Device* device, vector<int>& indices, float* vertices, int vertexSize, int vertexCount)
 	{
-		HRESULT hr = S_OK;
 		// Create Vertex Buffer
 		D3D11_BUFFER_DESC vbd = {};
 		D3D11_SUBRESOURCE_DATA vertexData = {};
@@ -59,7 +59,7 @@ public:
 		vbd.CPUAccessFlags = 0;
 		vbd.ByteWidth = vertexCount * vertexSize;
 		vertexData.pSysMem = vertices;
-		hr = device->CreateBuffer(&vbd, &vertexData, vertexBuffer.ReleaseAndGetAddressOf());
+		device->CreateBuffer(&vbd, &vertexData, vertexBuffer.ReleaseAndGetAddressOf());
 
 		// create Index Buffer
 		D3D11_BUFFER_DESC ibd = {};
@@ -69,13 +69,44 @@ public:
 		ibd.CPUAccessFlags = 0;
 		ibd.ByteWidth =  sizeof(int) * (int)indices.size();
 		indexData.pSysMem = indices.data();
-		hr = device->CreateBuffer(&ibd, &indexData, indexBuffer.GetAddressOf());
-
-		return hr;
+		device->CreateBuffer(&ibd, &indexData, indexBuffer.GetAddressOf());
 	}
 
+	void CreateTexture_Sampler(ID3D11Device* device, std::string filename)
+	{
+		// load texture here -------------------------
 
 
+		//Creating sampler
+		D3D11_SAMPLER_DESC sd = {};
+		sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+		sd.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+		sd.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+		sd.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+		sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
+		sd.MinLOD = 0;
+		sd.MaxLOD = D3D11_FLOAT32_MAX;
+		device->CreateSamplerState(&sd, samplerState.GetAddressOf());
+	}
+
+	void CreateShadersandInputLayout(ID3D11Device* device, BYTE vertexShader[], BYTE pixelShader[], 
+		D3D11_INPUT_ELEMENT_DESC format[], UINT numElements)
+	{
+		device->CreateVertexShader(vertexShader, sizeof(vertexShader), nullptr, vShader.ReleaseAndGetAddressOf());
+		device->CreateInputLayout(format, numElements, vertexShader,
+			sizeof(vertexShader), inputLayout.ReleaseAndGetAddressOf());
+		device->CreatePixelShader(pixelShader, sizeof(pixelShader), nullptr, pShader.ReleaseAndGetAddressOf());
+	}
+
+	void CreateConstantBuffer(ID3D11Device* device, UINT size)
+	{
+		CD3D11_BUFFER_DESC cbd = {};
+		cbd.Usage = D3D11_USAGE_DEFAULT;
+		cbd.ByteWidth = size;
+		cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		cbd.CPUAccessFlags = 0;
+		device->CreateBuffer(&cbd, nullptr, constantBuffer.ReleaseAndGetAddressOf());
+	}
 
 	Renderable();
 	~Renderable();
