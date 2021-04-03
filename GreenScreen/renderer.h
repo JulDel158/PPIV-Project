@@ -2,41 +2,29 @@
 // required for compiling shaders on the fly, consider pre-compiling instead
 #include <d3dcompiler.h>
 #include "test_pyramid.h"
+#include "VertexShader.h"
+#include "PixelShader.h"
 #pragma comment(lib, "d3dcompiler.lib")
-// Simple Vertex Shader
-const char* vertexShaderSource = R"(
-// by default HLSL is COLUMN major
-// 
-//constant buffer
-cbuffer SHADER_VARS
+
+
+//basic file loader (3DCC REFERENCE)
+std::vector<uint8_t> loadBlob(const char* filename)
 {
-	matrix w;
-	matrix v;
-	matrix p;
+	std::vector<uint8_t> blob;
+	std::fstream file{ filename, std::ios_base::in | std::ios_base::binary };
+
+	if (file.is_open())
+	{
+		file.seekg(0, std::ios_base::end);
+		blob.resize(file.tellg());
+		file.seekg(0, std::ios_base::beg);
+		file.read((char*)blob.data(), blob.size());
+		file.close();
+	}
+
+	return std::move(blob);
 }
 
-// an ultra simple hlsl vertex shader
-float4 main(float3 local_pos : POSITION,
-			float3 local_uvw : UVW,
-			float3 local_nrm : NRM) : SV_POSITION
-{
-	float4 proj_pos = float4(local_pos, 1);
-	// do w * v * p
-	proj_pos = mul(w, proj_pos);
-	proj_pos = mul(v, proj_pos);
-	proj_pos = mul(p, proj_pos);
-
-	return proj_pos;
-}
-)";
-// Simple Pixel Shader
-const char* pixelShaderSource = R"(
-// an ultra simple hlsl pixel shader
-float4 main() : SV_TARGET 
-{	
-	return float4(0.25f,0.0f,1.0f,0); 
-}
-)";
 // Creation, Rendering & Cleanup
 class Renderer
 {
@@ -46,9 +34,11 @@ class Renderer
 	// what we need at a minimum to draw a triangle
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		vertexBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		indexBuffer;
-	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vertexShader;
-	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pixelShader;
+	//Shaders
+	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vShader;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
+
 	// world view proj
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
 	struct SHADER_VARS
@@ -63,69 +53,63 @@ class Renderer
 
 
 public:
+
+	HRESULT CreateBuffers(ID3D11Device* device)
+	{
+		HRESULT hr = S_OK;
+		// Create Vertex Buffer
+		D3D11_SUBRESOURCE_DATA bData = { test_pyramid_data, 0, 0 };
+		CD3D11_BUFFER_DESC bDesc(sizeof(test_pyramid_data), D3D11_BIND_VERTEX_BUFFER);
+		hr = device->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
+
+		// create Index Buffer
+		D3D11_SUBRESOURCE_DATA iData = { test_pyramid_indicies, 0, 0 };
+		CD3D11_BUFFER_DESC iDesc(sizeof(test_pyramid_indicies), D3D11_BIND_INDEX_BUFFER);
+		hr = device->CreateBuffer(&iDesc, &iData, indexBuffer.GetAddressOf());
+
+		return hr;
+	}
+
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 	{
 		win = _win;
 		d3d = _d3d;
-		ID3D11Device* creator;
-		d3d.GetDevice((void**)&creator);
-		// Create Vertex Buffer
-		/*float verts[] = {
-			   0,   0.5f,
-			 0.5f, -0.5f,
-			-0.5f, -0.5f
-		};*/
-		D3D11_SUBRESOURCE_DATA bData = { test_pyramid_data, 0, 0 };
-		CD3D11_BUFFER_DESC bDesc(sizeof(test_pyramid_data), D3D11_BIND_VERTEX_BUFFER);
-		creator->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
-		// create index
-		D3D11_SUBRESOURCE_DATA iData = { test_pyramid_indicies, 0, 0 };
-		CD3D11_BUFFER_DESC iDesc(sizeof(test_pyramid_indicies), D3D11_BIND_INDEX_BUFFER);
-		creator->CreateBuffer(&iDesc, &iData, indexBuffer.GetAddressOf());
+		ID3D11Device* pDevice;
+		d3d.GetDevice((void**)&pDevice);
+		
+		CreateBuffers(pDevice);
 		
 		// Create Vertex Shader
 		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if _DEBUG
 		compilerFlags |= D3DCOMPILE_DEBUG;
 #endif
-		Microsoft::WRL::ComPtr<ID3DBlob> vsBlob, errors;
-		if (SUCCEEDED(D3DCompile(vertexShaderSource, strlen(vertexShaderSource),
-			nullptr, nullptr, nullptr, "main", "vs_4_0", compilerFlags, 0, 
-			vsBlob.GetAddressOf(), errors.GetAddressOf())))
-		{
-			creator->CreateVertexShader(vsBlob->GetBufferPointer(),
-				vsBlob->GetBufferSize(), nullptr, vertexShader.GetAddressOf());
-		}
-		else
-			std::cout << (char*)errors->GetBufferPointer() << std::endl;
-		// Create Pixel Shader
-		Microsoft::WRL::ComPtr<ID3DBlob> psBlob; errors.Reset();
-		if (SUCCEEDED(D3DCompile(pixelShaderSource, strlen(pixelShaderSource),
-			nullptr, nullptr, nullptr, "main", "ps_4_0", compilerFlags, 0, 
-			psBlob.GetAddressOf(), errors.GetAddressOf())))
-		{
-			creator->CreatePixelShader(psBlob->GetBufferPointer(),
-				psBlob->GetBufferSize(), nullptr, pixelShader.GetAddressOf());
-		}
-		else
-			std::cout << (char*)errors->GetBufferPointer() << std::endl;
+		// Setting vertex shader
+		pDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr,
+			vShader.ReleaseAndGetAddressOf());
+
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
-			{ 
-				"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 
-				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 
-			},
 			{
-				"UVW", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+				"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
 				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
 			},
 			{
-				"NRM", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+				"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
+			},
+			{
+				"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
 				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
 			}
 		};
-		creator->CreateInputLayout(format, ARRAYSIZE(format), 
-			vsBlob->GetBufferPointer(), vsBlob->GetBufferSize(), 
+		
+		//Setting pixel Shader
+		pDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr,
+			pShader.ReleaseAndGetAddressOf());
+
+		//setting input buffer
+		pDevice->CreateInputLayout(format, ARRAYSIZE(format), VertexShader, ARRAYSIZE(VertexShader), 
 			vertexFormat.GetAddressOf());
 
 		//init math stuff
@@ -141,10 +125,10 @@ public:
 		// create constant buffer
 		D3D11_SUBRESOURCE_DATA cData = { &Vars, 0, 0 };
 		CD3D11_BUFFER_DESC cDesc(sizeof(Vars), D3D11_BIND_CONSTANT_BUFFER);
-		creator->CreateBuffer(&cDesc, &cData, constantBuffer.GetAddressOf());
+		pDevice->CreateBuffer(&cDesc, &cData, constantBuffer.GetAddressOf());
 
 		// free temporary handle
-		creator->Release();
+		pDevice->Release();
 	}
 	void Render()
 	{
@@ -161,8 +145,8 @@ public:
 		ID3D11Buffer* const buffs[] = { vertexBuffer.Get() };
 		con->IASetVertexBuffers(0, ARRAYSIZE(buffs), buffs, strides, offsets);
 		con->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-		con->VSSetShader(vertexShader.Get(), nullptr, 0);
-		con->PSSetShader(pixelShader.Get(), nullptr, 0);
+		con->VSSetShader(vShader.Get(), nullptr, 0);
+		con->PSSetShader(pShader.Get(), nullptr, 0);
 		con->IASetInputLayout(vertexFormat.Get());
 		// send in the constant buffer
 		ID3D11Buffer* const constants[] = { constantBuffer.Get() };
