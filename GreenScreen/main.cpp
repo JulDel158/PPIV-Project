@@ -2,7 +2,7 @@
 #define GATEWARE_ENABLE_CORE // All libraries need this
 #define GATEWARE_ENABLE_SYSTEM // Graphics libs require system level libraries
 #define GATEWARE_ENABLE_GRAPHICS // Enables all Graphics Libraries
-#define GATEWARE_ENABLE_MATH	//math library 
+#define GATEWARE_ENABLE_MATH	// Enables Math Library 
 // Ignore some GRAPHICS libraries we aren't going to use
 #define GATEWARE_DISABLE_GDIRECTX12SURFACE // we have another template for this
 #define GATEWARE_DISABLE_GRASTERSURFACE // we have another template for this
@@ -17,6 +17,13 @@ using namespace GW;
 using namespace CORE;
 using namespace SYSTEM;
 using namespace GRAPHICS;
+
+IDXGISwapChain* pSwapChain;
+ID3D11DeviceContext* pDeviceContext;
+ID3D11RenderTargetView* pTargetView;
+
+void CleanUp();
+
 // lets pop a window and use D3D11 to clear to a green screen
 int main()
 {
@@ -25,33 +32,40 @@ int main()
 	GDirectX11Surface d3d11;
 	if (+win.Create(0, 0, 800, 600, GWindowStyle::WINDOWEDBORDERED))
 	{
-		float clr[] = { 57/255.0f, 1.0f, 20/255.0f, 1 }; // start with a neon green
+		float clr[] = { 0, 0, 0, 0 }; // start black
 		msgs.Create(win, [&]() {
-			if (+msgs.Find(GWindow::Events::RESIZE, true))
-				clr[2] += 0.01f; // move towards a cyan as they resize
+			//if (+msgs.Find(GWindow::Events::RESIZE, true))
+			//	clr[2] += 0; // move towards a cyan as they resize
 			});
+
 		if (+d3d11.Create(win, 0))
 		{
 			Renderer renderer(win, d3d11);
+			// main loop (runs until window is closed)
 			while (+win.ProcessWindowEvents())
 			{
-				IDXGISwapChain* swap;
-				ID3D11DeviceContext* con;
-				ID3D11RenderTargetView* view;
-				if (+d3d11.GetImmediateContext((void**)&con) &&
-					+d3d11.GetRenderTargetView((void**)&view) &&
-					+d3d11.GetSwapchain((void**)&swap))
+				if (+d3d11.GetImmediateContext((void**)&pDeviceContext) &&
+					+d3d11.GetRenderTargetView((void**)&pTargetView) &&
+					+d3d11.GetSwapchain((void**)&pSwapChain))
 				{
-					con->ClearRenderTargetView(view, clr);
+					pDeviceContext->ClearRenderTargetView(pTargetView, clr);
 					renderer.Render();
-					swap->Present(1, 0);
+					pSwapChain->Present(1, 0);
 					// release incremented COM reference counts
-					swap->Release();
-					view->Release();
-					con->Release();
+					CleanUp();
 				}
 			}
+
+			
+			
 		}
 	}
 	return 0; // that's all folks
+}
+
+void CleanUp()
+{
+	if (pSwapChain) pSwapChain->Release();
+	if (pTargetView) pTargetView->Release();
+	if (pDeviceContext) pDeviceContext->Release();
 }

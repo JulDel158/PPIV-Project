@@ -27,6 +27,7 @@ add_executable (GreenScreen
 	test_pyramid.h
 	VertexShader.h
 	PixelShader.h
+	Renderable.h
 	${VERTEX_SHADERS}
 	${PIXEL_SHADERS}
 )

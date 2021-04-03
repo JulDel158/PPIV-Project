@@ -6,31 +6,15 @@
 #include "PixelShader.h"
 #pragma comment(lib, "d3dcompiler.lib")
 
-
-//basic file loader (3DCC REFERENCE)
-std::vector<uint8_t> loadBlob(const char* filename)
-{
-	std::vector<uint8_t> blob;
-	std::fstream file{ filename, std::ios_base::in | std::ios_base::binary };
-
-	if (file.is_open())
-	{
-		file.seekg(0, std::ios_base::end);
-		blob.resize(file.tellg());
-		file.seekg(0, std::ios_base::beg);
-		file.read((char*)blob.data(), blob.size());
-		file.close();
-	}
-
-	return std::move(blob);
-}
-
 // Creation, Rendering & Cleanup
 class Renderer
 {
 	// proxy handles
 	GW::SYSTEM::GWindow win;
 	GW::GRAPHICS::GDirectX11Surface d3d;
+	// device and target view
+	ID3D11DeviceContext* con;
+	ID3D11RenderTargetView* view;
 	// what we need at a minimum to draw a triangle
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		vertexBuffer;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		indexBuffer;
@@ -38,6 +22,7 @@ class Renderer
 	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vShader;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
+
 
 	// world view proj
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
@@ -108,7 +93,7 @@ public:
 		pDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr,
 			pShader.ReleaseAndGetAddressOf());
 
-		//setting input buffer
+		//Setting input layout
 		pDevice->CreateInputLayout(format, ARRAYSIZE(format), VertexShader, ARRAYSIZE(VertexShader), 
 			vertexFormat.GetAddressOf());
 
@@ -133,8 +118,6 @@ public:
 	void Render()
 	{
 		// grab the context & render target
-		ID3D11DeviceContext* con;
-		ID3D11RenderTargetView* view;
 		d3d.GetImmediateContext((void**)&con);
 		d3d.GetRenderTargetView((void**)&view);
 		// setup the pipeline

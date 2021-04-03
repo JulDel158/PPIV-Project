@@ -1,9 +1,9 @@
 
 cbuffer SHADER_VARS : register(b0)
 {
-    matrix w;
-    matrix v;
-    matrix p;
+    matrix world;
+    matrix view;
+    matrix projection;
 }
 
 struct VS_INPUT
