@@ -5,6 +5,11 @@
 #include "VertexShader.h"
 #include "PixelShader.h"
 #pragma comment(lib, "d3dcompiler.lib")
+#include <d3d11_1.h>
+#include <directxmath.h>
+#include <directxcolors.h>
+
+using namespace DirectX;
 
 // Creation, Rendering & Cleanup
 class Renderer
@@ -24,8 +29,21 @@ class Renderer
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
 
 
+	D3D_DRIVER_TYPE         g_driverType = D3D_DRIVER_TYPE_NULL; // a thing we need for lights 
+
 	// world view proj
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
+
+	struct ConstantBuffer
+	{
+		XMMATRIX mWorld;
+		XMMATRIX mView;
+		XMMATRIX mProjection;
+		XMFLOAT4 vLightDir[2];
+		XMFLOAT4 vLightColor[2];
+		XMFLOAT4 vOutputColor;
+	};
+
 	struct SHADER_VARS
 	{
 		GW::MATH::GMATRIXF w = GW::MATH::GIdentityMatrixF;
@@ -35,7 +53,7 @@ class Renderer
 	}Vars;
 	// math library handle
 	GW::MATH::GMatrix m;
-
+	ConstantBuffer cb1;
 
 public:
 
@@ -69,6 +87,12 @@ public:
 #if _DEBUG
 		compilerFlags |= D3DCOMPILE_DEBUG;
 #endif
+
+
+
+
+
+
 		// Setting vertex shader
 		pDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr,
 			vShader.ReleaseAndGetAddressOf());
@@ -117,6 +141,51 @@ public:
 	}
 	void Render()
 	{
+
+		// Update our time
+		static float t = 0.0f;
+		if (g_driverType == D3D_DRIVER_TYPE_REFERENCE)
+		{
+			t += (float)XM_PI * 0.0125f;
+		}
+		else
+		{
+			static ULONGLONG timeStart = 0;
+			ULONGLONG timeCur = GetTickCount64();
+			if (timeStart == 0)
+				timeStart = timeCur;
+			t = (timeCur - timeStart) / 1000.0f;
+		}
+		//Settting some of the light variables
+		XMFLOAT4 vLightDirs[2] =
+		{
+			XMFLOAT4(-0.577f, 0.577f, -0.577f, 1.0f),
+			XMFLOAT4(0.0f, 0.0f, -1.0f, 1.0f),
+		};
+		XMFLOAT4 vLightColors[2] =
+		{
+			XMFLOAT4(0.75f, 0.75f, 0.75f, 1.0f),
+			XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
+		};
+
+
+		//setting lighting stuff and hoping to god it doesn't fuck things up
+		XMStoreFloat4(&vLightDirs[0], { -0.577f, 0.577f, -0.577f, 1.0f });
+		XMStoreFloat4(&vLightDirs[1], { 0.577f, 0.2577f, -0.577f, 1.0f });
+
+		XMStoreFloat4(&vLightColors[0], { 0.75f, 0.75f, 0.75f, 1.0f });
+		//	XMStoreFloat4(&vLightColors[1], { 0.2f, 0.2f, 0.5f, 1.0f });
+		XMStoreFloat4(&vLightColors[1], { 0.5f, 0.5f, 1.0f, 1.0f });
+
+
+		// Rotate the second light around the origin
+		XMMATRIX mRotate = XMMatrixRotationY(-1.0f * t);
+		XMVECTOR vLightDir = XMLoadFloat4(&vLightDirs[1]);
+		// rotares the second light
+		//vLightDir = XMVector3Transform(vLightDir, mRotate);
+		XMStoreFloat4(&vLightDirs[1], vLightDir);
+
+
 		// grab the context & render target
 		d3d.GetImmediateContext((void**)&con);
 		d3d.GetRenderTargetView((void**)&view);

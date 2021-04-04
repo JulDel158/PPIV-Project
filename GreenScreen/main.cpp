@@ -17,10 +17,14 @@ using namespace GW;
 using namespace CORE;
 using namespace SYSTEM;
 using namespace GRAPHICS;
+using namespace DirectX;
 
 IDXGISwapChain* pSwapChain;
 ID3D11DeviceContext* pDeviceContext;
 ID3D11RenderTargetView* pTargetView;
+
+
+
 
 void CleanUp();
 
