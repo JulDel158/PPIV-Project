@@ -28,6 +28,8 @@ add_executable (GreenScreen
 	VertexShader.h
 	PixelShader.h
 	Renderable.h
+	DDSTextureLoader.cpp
+	DDSTextureLoader.h
 	${VERTEX_SHADERS}
 	${PIXEL_SHADERS}
 )

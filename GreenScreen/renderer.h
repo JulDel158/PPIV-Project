@@ -28,7 +28,6 @@ class Renderer
 	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
 
-
 	D3D_DRIVER_TYPE         g_driverType = D3D_DRIVER_TYPE_NULL; // a thing we need for lights 
 
 	// world view proj
