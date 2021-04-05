@@ -64,27 +64,18 @@ public:
 		// Create Vertex Buffer
 		D3D11_SUBRESOURCE_DATA vData = {vertices, 0, 0};
 		CD3D11_BUFFER_DESC vDesc(sizeof(vertices), D3D11_BIND_VERTEX_BUFFER);
+		vDesc.Usage = D3D11_USAGE_DEFAULT;
+		vDesc.CPUAccessFlags = 0;
+		vDesc.ByteWidth = vCount * vSize;
 		device->CreateBuffer(&vDesc, &vData, vertexBuffer.ReleaseAndGetAddressOf());
-		/*D3D11_BUFFER_DESC vbd = { };
-		vbd.Usage = D3D11_USAGE_DEFAULT;
-		vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		vbd.CPUAccessFlags = 0;
-		vbd.ByteWidth = vertexCount * vertexSize;
-		vertexData.pSysMem = vertices;*/
 		
 		// create Index Buffer
 		D3D11_SUBRESOURCE_DATA iData = {indices, 0, 0 };
-		CD3D11_BUFFER_DESC iDesc(indexSize, D3D11_BIND_INDEX_BUFFER);
+		CD3D11_BUFFER_DESC iDesc(indexCount, D3D11_BIND_INDEX_BUFFER);
+		iDesc.Usage = D3D11_USAGE_DEFAULT;
+		iDesc.CPUAccessFlags = 0;
+		iDesc.ByteWidth = sizeof(int) * iCount;
 		device->CreateBuffer(&iDesc, &iData, indexBuffer.ReleaseAndGetAddressOf());
-
-		/*D3D11_BUFFER_DESC ibd = {};
-		D3D11_SUBRESOURCE_DATA indexData = {};
-		ibd.Usage = D3D11_USAGE_DEFAULT;
-		ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		ibd.CPUAccessFlags = 0;
-		ibd.ByteWidth =  sizeof(int) * (int)indices.size();
-		indexData.pSysMem = indices.data();
-		device->CreateBuffer(&ibd, &indexData, indexBuffer.GetAddressOf());*/
 	}
 
 	void CreateTexture_Sampler(ID3D11Device* device, std::string filename)

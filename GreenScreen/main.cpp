@@ -52,10 +52,10 @@ int main()
 					renderer.Render();
 					pSwapChain->Present(1, 0);
 					// release incremented COM reference counts
-					if (pSwapChain) pSwapChain->Release();
-					if (pTargetView) pTargetView->Release();
-					pSwapChain = nullptr;
-					pTargetView = nullptr;
+					 pSwapChain->Release();
+					 pTargetView->Release();
+					/*pSwapChain = nullptr;
+					pTargetView = nullptr;*/
 					//CleanUp();
 				}
 			}
