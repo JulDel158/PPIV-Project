@@ -52,23 +52,18 @@ int main()
 					renderer.Render();
 					pSwapChain->Present(1, 0);
 					// release incremented COM reference counts
-					 pSwapChain->Release();
-					 pTargetView->Release();
-					/*pSwapChain = nullptr;
-					pTargetView = nullptr;*/
-					//CleanUp();
+					CleanUp();
 				}
 			}
 		}
-			CleanUp();
 	}
 	return 0; // that's all folks
 }
 
 void CleanUp()
 {
+	
 	if (pSwapChain) pSwapChain->Release();
 	if (pTargetView) pTargetView->Release();
-	if (pDeviceContext) pDeviceContext->ClearState();
 	if (pDeviceContext) pDeviceContext->Release();
 }
