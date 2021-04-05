@@ -4,6 +4,7 @@
 #include <wrl/client.h>
 #include <fstream>
 #include <vector>
+#include "DDSTextureLoader.h"
 #pragma comment(lib, "d3dcompiler.lib")
 
 using namespace std;
@@ -41,6 +42,10 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	inputLayout = nullptr;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer = nullptr;
 
+	UINT vSize = 0;
+	int vCount = 0;
+	int iCount = 0;
+
 	// Default topology to draw triangles
 	D3D11_PRIMITIVE_TOPOLOGY primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
@@ -49,33 +54,46 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState = nullptr;
 
 	// creates vertex and index buffers using mesh data
-	void CreateBuffers(ID3D11Device* device, vector<int>& indices, float* vertices, int vertexSize, int vertexCount)
+	void CreateBuffers(ID3D11Device* device, const OBJ_VERT* vertices, const unsigned int* indices, 
+		SIZE_T indexSize, int vertexCount, int indexCount)
 	{
+		vSize = sizeof(OBJ_VERT);
+		vCount = vertexCount;
+		iCount = indexCount;
+		
 		// Create Vertex Buffer
-		D3D11_BUFFER_DESC vbd = {};
-		D3D11_SUBRESOURCE_DATA vertexData = {};
+		D3D11_SUBRESOURCE_DATA vData = {vertices, 0, 0};
+		CD3D11_BUFFER_DESC vDesc(sizeof(vertices), D3D11_BIND_VERTEX_BUFFER);
+		device->CreateBuffer(&vDesc, &vData, vertexBuffer.ReleaseAndGetAddressOf());
+		/*D3D11_BUFFER_DESC vbd = { };
 		vbd.Usage = D3D11_USAGE_DEFAULT;
 		vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		vbd.CPUAccessFlags = 0;
 		vbd.ByteWidth = vertexCount * vertexSize;
-		vertexData.pSysMem = vertices;
-		device->CreateBuffer(&vbd, &vertexData, vertexBuffer.ReleaseAndGetAddressOf());
-
+		vertexData.pSysMem = vertices;*/
+		
 		// create Index Buffer
-		D3D11_BUFFER_DESC ibd = {};
+		D3D11_SUBRESOURCE_DATA iData = {indices, 0, 0 };
+		CD3D11_BUFFER_DESC iDesc(indexSize, D3D11_BIND_INDEX_BUFFER);
+		device->CreateBuffer(&iDesc, &iData, indexBuffer.ReleaseAndGetAddressOf());
+
+		/*D3D11_BUFFER_DESC ibd = {};
 		D3D11_SUBRESOURCE_DATA indexData = {};
 		ibd.Usage = D3D11_USAGE_DEFAULT;
 		ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
 		ibd.CPUAccessFlags = 0;
 		ibd.ByteWidth =  sizeof(int) * (int)indices.size();
 		indexData.pSysMem = indices.data();
-		device->CreateBuffer(&ibd, &indexData, indexBuffer.GetAddressOf());
+		device->CreateBuffer(&ibd, &indexData, indexBuffer.GetAddressOf());*/
 	}
 
 	void CreateTexture_Sampler(ID3D11Device* device, std::string filename)
 	{
 		// load texture here -------------------------
-
+		std::wstring wstr = std::wstring(filename.begin(), filename.end());
+		const wchar_t* wcstr = wstr.c_str();
+		CreateDDSTextureFromFile(device, wcstr, nullptr,
+			sResourceView.ReleaseAndGetAddressOf());
 
 		//Creating sampler
 		D3D11_SAMPLER_DESC sd = {};
@@ -86,16 +104,18 @@ public:
 		sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		sd.MinLOD = 0;
 		sd.MaxLOD = D3D11_FLOAT32_MAX;
-		device->CreateSamplerState(&sd, samplerState.GetAddressOf());
+		device->CreateSamplerState(&sd, samplerState.ReleaseAndGetAddressOf());
 	}
 
-	void CreateShadersandInputLayout(ID3D11Device* device, BYTE vertexShader[], BYTE pixelShader[], 
-		D3D11_INPUT_ELEMENT_DESC format[], UINT numElements)
+	void CreateShadersandInputLayout(ID3D11Device* device, const BYTE* vertexShader, SIZE_T vByteLength, 
+		const BYTE* pixelShader, SIZE_T pByteLength,
+		D3D11_INPUT_ELEMENT_DESC format[], UINT nElements)
 	{
-		device->CreateVertexShader(vertexShader, sizeof(vertexShader), nullptr, vShader.ReleaseAndGetAddressOf());
-		device->CreateInputLayout(format, numElements, vertexShader,
-			sizeof(vertexShader), inputLayout.ReleaseAndGetAddressOf());
-		device->CreatePixelShader(pixelShader, sizeof(pixelShader), nullptr, pShader.ReleaseAndGetAddressOf());
+		device->CreateVertexShader(vertexShader, vByteLength, nullptr, vShader.ReleaseAndGetAddressOf());
+		device->CreatePixelShader(pixelShader, pByteLength, nullptr, pShader.ReleaseAndGetAddressOf());
+		device->CreateInputLayout(format, nElements, vertexShader, 
+			vByteLength, inputLayout.ReleaseAndGetAddressOf());
+		
 	}
 
 	void CreateConstantBuffer(ID3D11Device* device, UINT size)
@@ -106,6 +126,46 @@ public:
 		cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 		cbd.CPUAccessFlags = 0;
 		device->CreateBuffer(&cbd, nullptr, constantBuffer.ReleaseAndGetAddressOf());
+	}
+
+	void Bind(ID3D11DeviceContext* dContext)
+	{
+		if (constantBuffer) {
+			dContext->VSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
+			dContext->PSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
+		}
+
+		if (inputLayout)
+			dContext->IASetInputLayout(inputLayout.Get());
+		if (vShader)
+			dContext->VSSetShader(vShader.Get(), nullptr, 0);
+		if(pShader)
+			dContext->PSSetShader(pShader.Get(), nullptr, 0);
+		if(sResourceView)
+			dContext->PSSetShaderResources(0, 1, sResourceView.GetAddressOf());
+		if(samplerState)
+			dContext->PSSetSamplers(0, 1, samplerState.GetAddressOf());
+		/*UINT strides = vSize;*/
+		if (vertexBuffer)
+		{
+			const UINT strides[] = { sizeof(OBJ_VERT) };
+			const UINT offsets[] = { 0 };
+			ID3D11Buffer* const buffs[] = { vertexBuffer.Get() };
+			dContext->IASetVertexBuffers(0, ARRAYSIZE(buffs), buffs, strides, offsets);
+		}
+		if(indexBuffer)
+			dContext->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+
+		dContext->IASetPrimitiveTopology(primitiveTopology);
+	}
+
+	//Draws object (must bind first)
+	void Draw(ID3D11DeviceContext* dContext)
+	{
+		if (indexBuffer)
+			dContext->DrawIndexed(iCount, 0, 0);
+		else if (vertexBuffer)
+			dContext->Draw(vCount, 0);
 	}
 
 	Renderable();

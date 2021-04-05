@@ -18,9 +18,9 @@ using namespace CORE;
 using namespace SYSTEM;
 using namespace GRAPHICS;
 
-IDXGISwapChain* pSwapChain;
-ID3D11DeviceContext* pDeviceContext;
-ID3D11RenderTargetView* pTargetView;
+IDXGISwapChain* pSwapChain = nullptr;
+ID3D11DeviceContext* pDeviceContext = nullptr;
+ID3D11RenderTargetView* pTargetView = nullptr;
 
 void CleanUp();
 
@@ -52,13 +52,15 @@ int main()
 					renderer.Render();
 					pSwapChain->Present(1, 0);
 					// release incremented COM reference counts
-					CleanUp();
+					if (pSwapChain) pSwapChain->Release();
+					if (pTargetView) pTargetView->Release();
+					pSwapChain = nullptr;
+					pTargetView = nullptr;
+					//CleanUp();
 				}
 			}
-
-			
-			
 		}
+			CleanUp();
 	}
 	return 0; // that's all folks
 }
@@ -67,5 +69,6 @@ void CleanUp()
 {
 	if (pSwapChain) pSwapChain->Release();
 	if (pTargetView) pTargetView->Release();
+	if (pDeviceContext) pDeviceContext->ClearState();
 	if (pDeviceContext) pDeviceContext->Release();
 }

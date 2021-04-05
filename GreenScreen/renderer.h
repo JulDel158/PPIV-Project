@@ -1,9 +1,8 @@
 // minimalistic code to draw a single triangle, this is not part of the API.
-// required for compiling shaders on the fly, consider pre-compiling instead
-#include <d3dcompiler.h>
 #include "test_pyramid.h"
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "Renderable.h"
 #pragma comment(lib, "d3dcompiler.lib")
 
 // Creation, Rendering & Cleanup
@@ -16,12 +15,13 @@ class Renderer
 	ID3D11DeviceContext* con;
 	ID3D11RenderTargetView* view;
 	// what we need at a minimum to draw a triangle
-	Microsoft::WRL::ComPtr<ID3D11Buffer>		vertexBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer>		indexBuffer;
-	//Shaders
-	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vShader;
-	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader;
-	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
+	//Microsoft::WRL::ComPtr<ID3D11Buffer>		vertexBuffer;
+	//Microsoft::WRL::ComPtr<ID3D11Buffer>		indexBuffer;
+	//////Shaders
+	//Microsoft::WRL::ComPtr<ID3D11VertexShader>	vShader;
+	//Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader;
+	//Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
+	Renderable pyramid;
 
 	// world view proj
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
@@ -42,14 +42,14 @@ public:
 	{
 		HRESULT hr = S_OK;
 		// Create Vertex Buffer
-		D3D11_SUBRESOURCE_DATA bData = { test_pyramid_data, 0, 0 };
-		CD3D11_BUFFER_DESC bDesc(sizeof(test_pyramid_data), D3D11_BIND_VERTEX_BUFFER);
-		hr = device->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
+		//D3D11_SUBRESOURCE_DATA bData = { test_pyramid_data, 0, 0 };
+		//CD3D11_BUFFER_DESC bDesc(sizeof(test_pyramid_data), D3D11_BIND_VERTEX_BUFFER);
+		//hr = device->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
 
-		// create Index Buffer
-		D3D11_SUBRESOURCE_DATA iData = { test_pyramid_indicies, 0, 0 };
-		CD3D11_BUFFER_DESC iDesc(sizeof(test_pyramid_indicies), D3D11_BIND_INDEX_BUFFER);
-		hr = device->CreateBuffer(&iDesc, &iData, indexBuffer.GetAddressOf());
+		//// create Index Buffer
+		//D3D11_SUBRESOURCE_DATA iData = { test_pyramid_indicies, 0, 0 };
+		//CD3D11_BUFFER_DESC iDesc(sizeof(test_pyramid_indicies), D3D11_BIND_INDEX_BUFFER);
+		//hr = device->CreateBuffer(&iDesc, &iData, indexBuffer.GetAddressOf());
 
 		return hr;
 	}
@@ -60,17 +60,13 @@ public:
 		d3d = _d3d;
 		ID3D11Device* pDevice;
 		d3d.GetDevice((void**)&pDevice);
+		//making pyramid buffers
+		pyramid.CreateBuffers(pDevice, test_pyramid_data, test_pyramid_indicies, sizeof(test_pyramid_indicies),
+								test_pyramid_vertexcount, test_pyramid_indexcount);
+		//CreateBuffers(pDevice);
 		
-		CreateBuffers(pDevice);
-		
-		// Create Vertex Shader
-		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if _DEBUG
-		compilerFlags |= D3DCOMPILE_DEBUG;
-#endif
 		// Setting vertex shader
-		pDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr,
-			vShader.ReleaseAndGetAddressOf());
+		//pDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, vShader.ReleaseAndGetAddressOf());
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -87,14 +83,19 @@ public:
 				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
 			}
 		};
-		
+
+
 		//Setting pixel Shader
-		pDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr,
-			pShader.ReleaseAndGetAddressOf());
+		/*pDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr,
+			pShader.ReleaseAndGetAddressOf());*/
 
 		//Setting input layout
-		pDevice->CreateInputLayout(format, ARRAYSIZE(format), VertexShader, ARRAYSIZE(VertexShader), 
-			vertexFormat.GetAddressOf());
+		/*pDevice->CreateInputLayout(format, ARRAYSIZE(format), VertexShader, ARRAYSIZE(VertexShader), 
+			vertexFormat.GetAddressOf());*/
+
+			//creatomg v/p shaders and input layout
+		pyramid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
 		//init math stuff
 		m.Create();
@@ -107,9 +108,10 @@ public:
 		m.ProjectionDirectXLHF(G_PI_F / 2.0f, ar, 0.01f, 100, Vars.p);
 
 		// create constant buffer
-		D3D11_SUBRESOURCE_DATA cData = { &Vars, 0, 0 };
+		/*D3D11_SUBRESOURCE_DATA cData = { &Vars, 0, 0 };
 		CD3D11_BUFFER_DESC cDesc(sizeof(Vars), D3D11_BIND_CONSTANT_BUFFER);
-		pDevice->CreateBuffer(&cDesc, &cData, constantBuffer.GetAddressOf());
+		pDevice->CreateBuffer(&cDesc, &cData, constantBuffer.GetAddressOf());*/
+		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 
 		// free temporary handle
 		pDevice->Release();
@@ -122,22 +124,29 @@ public:
 		// setup the pipeline
 		ID3D11RenderTargetView *const views[] = { view };
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, nullptr);
-		const UINT strides[] = { sizeof(OBJ_VERT) };
-		const UINT offsets[] = { 0 };
-		ID3D11Buffer* const buffs[] = { vertexBuffer.Get() };
-		con->IASetVertexBuffers(0, ARRAYSIZE(buffs), buffs, strides, offsets);
-		con->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-		con->VSSetShader(vShader.Get(), nullptr, 0);
-		con->PSSetShader(pShader.Get(), nullptr, 0);
-		con->IASetInputLayout(vertexFormat.Get());
+		/*const UINT strides[] = { sizeof(OBJ_VERT) };
+		const UINT offsets[] = { 0 };*/
+
+
+		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &Vars, 0, 0);
+		pyramid.Bind(con);
+		pyramid.Draw(con);
+
+
+		//ID3D11Buffer* const buffs[] = { vertexBuffer.Get() };
+		//con->IASetVertexBuffers(0, ARRAYSIZE(buffs), buffs, strides, offsets);
+		//con->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
+		//con->VSSetShader(vShader.Get(), nullptr, 0);
+		//con->PSSetShader(pShader.Get(), nullptr, 0);
+		//con->IASetInputLayout(vertexFormat.Get());
 		// send in the constant buffer
 		ID3D11Buffer* const constants[] = { constantBuffer.Get() };
-		con->VSSetConstantBuffers(0, 1, constants);
+		//con->VSSetConstantBuffers(0, 1, constants);
 		// to update dynamically *****
 		// con->UpdateSubresource()
 		// now we can draw
-		con->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		con->DrawIndexed(test_pyramid_indexcount, 0, 0);
+		//con->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//con->DrawIndexed(test_pyramid_indexcount, 0, 0);
 		// release temp handles
 		view->Release();
 		con->Release();
