@@ -1,4 +1,4 @@
-// minimalistic code to draw a single triangle, this is not part of the API.
+#include "axe1.h"
 #include "test_pyramid.h"
 #include "VertexShader.h"
 #include "PixelShader.h"
@@ -16,6 +16,7 @@ class Renderer
 	ID3D11RenderTargetView* view;
 	//Renderable object used to load pyramid obj
 	Renderable pyramid;
+	Renderable axe;
 
 	// world view projection matices (constnat buffer)
 	struct SHADER_VARS
@@ -33,12 +34,15 @@ public:
 	{
 		win = _win;
 		d3d = _d3d;
-		ID3D11Device* pDevice;
+		ID3D11Device* pDevice = nullptr;
 		d3d.GetDevice((void**)&pDevice);
 
 		//making pyramid buffers
 		pyramid.CreateBuffers(pDevice, test_pyramid_data, test_pyramid_indicies, sizeof(test_pyramid_indicies),
 								test_pyramid_vertexcount, test_pyramid_indexcount);
+
+		axe.CreateBuffers(pDevice, axe1_data, axe1_indicies, sizeof(axe1_indicies), 
+								axe1_vertexcount, axe1_indexcount);
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -60,10 +64,13 @@ public:
 		pyramid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
+		axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+
 		//init math stuff
 		m.Create();
-		m.LookAtLHF(GW::MATH::GVECTORF{ 0.5f, 1.0f, -2.0f }, //eye
-					GW::MATH::GVECTORF{ 0,0.5f,0 }, //at
+		m.LookAtLHF(GW::MATH::GVECTORF{ 10.7f, 25.0f, -20.0f }, //eye
+					GW::MATH::GVECTORF{ 0,10.0f,0 }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.v);
 		float ar;
@@ -72,6 +79,8 @@ public:
 
 		// create constant buffer
 		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+
+		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 
 		// free temporary handle
 		pDevice->Release();
@@ -89,6 +98,10 @@ public:
 		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &Vars, 0, 0);
 		pyramid.Bind(con);
 		pyramid.Draw(con);
+
+		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &Vars, 0, 0);
+		axe.Bind(con);
+		axe.Draw(con);
 
 		// release temp handles
 		view->Release();
