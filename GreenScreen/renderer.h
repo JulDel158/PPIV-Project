@@ -1,13 +1,21 @@
-#include "axe1.h"
-#include "test_pyramid.h"
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "axe1.h"
+#include "test_pyramid.h"
 #include "Renderable.h"
 #pragma comment(lib, "d3dcompiler.lib")
 
 // Creation, Rendering & Cleanup
 class Renderer
 {
+	// world, view, projection matrices (constant buffer)
+	struct SHADER_VARS
+	{
+		GW::MATH::GMATRIXF world = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
+	};
+
 	// proxy handles
 	GW::SYSTEM::GWindow win;
 	GW::GRAPHICS::GDirectX11Surface d3d;
@@ -18,14 +26,11 @@ class Renderer
 	Renderable pyramid;
 	Renderable axe;
 
-	// world view projection matices (constnat buffer)
-	struct SHADER_VARS
-	{
-		GW::MATH::GMATRIXF w = GW::MATH::GIdentityMatrixF;
-		GW::MATH::GMATRIXF v = GW::MATH::GIdentityMatrixF;
-		GW::MATH::GMATRIXF p = GW::MATH::GIdentityMatrixF;
+	SHADER_VARS Vars;
+	
 
-	}Vars;
+	
+	
 	// math library handle
 	GW::MATH::GMatrix m;
 
@@ -36,6 +41,8 @@ public:
 		d3d = _d3d;
 		ID3D11Device* pDevice = nullptr;
 		d3d.GetDevice((void**)&pDevice);
+
+		
 
 		//making pyramid buffers
 		pyramid.CreateBuffers(pDevice, test_pyramid_data, test_pyramid_indicies, sizeof(test_pyramid_indicies),
@@ -69,17 +76,21 @@ public:
 
 		//init math stuff
 		m.Create();
-		m.LookAtLHF(GW::MATH::GVECTORF{ 10.7f, 25.0f, -20.0f }, //eye
-					GW::MATH::GVECTORF{ 0,10.0f,0 }, //at
+		// Initializing identity matrix
+		//m.IdentityF(Vars.world);
+		
+		// Initializing view matrix
+		m.LookAtLHF(GW::MATH::GVECTORF{ 15.0f, 6.0f, 2.0f }, //eye
+					GW::MATH::GVECTORF{ 0,0.0f,0 }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
-					Vars.v);
+					Vars.view);
 		float ar;
 		d3d.GetAspectRatio(ar);
-		m.ProjectionDirectXLHF(G_PI_F / 2.0f, ar, 0.01f, 100, Vars.p);
+		//Initializing projection matrix
+		m.ProjectionDirectXLHF(G_PI_F / 2.0f, ar, 0.01f, 100, Vars.projection);
 
 		// create constant buffer
 		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
-
 		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 
 		// free temporary handle
@@ -94,12 +105,24 @@ public:
 		// setup the pipeline
 		ID3D11RenderTargetView *const views[] = { view };
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, nullptr);
+
+		SHADER_VARS pcb;
+		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
+		m.ScalingF(pcb.world, scale, pcb.world);
+		m.TransposeF(pcb.world, pcb.world);
+		m.TransposeF(Vars.view, pcb.view);
+		m.TransposeF(Vars.projection, pcb.projection);
+
 		//Preparing to draw pyramid
-		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &Vars, 0, 0);
+		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
 		pyramid.Draw(con);
 
-		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &Vars, 0, 0);
+		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
+		m.ScalingF(Vars.world, scale, pcb.world);
+		m.TransposeF(pcb.world, pcb.world);
+
+		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
 		axe.Draw(con);
 
@@ -107,6 +130,20 @@ public:
 		view->Release();
 		con->Release();
 	}
+
+	//Use to update things such as camera movement, world matrix, etc
+	void Update()
+	{
+		static float t = 0.0f;
+		static ULONGLONG timeStart = 0;
+		ULONGLONG timeCur = GetTickCount64();
+		if (timeStart == 0)
+			timeStart = timeCur;
+		t = (timeCur - timeStart) / 1000.0f;
+		
+		m.RotationYF(Vars.world, t, Vars.world);
+	}
+
 	~Renderer()
 	{
 		// ComPtr will auto release so nothing to do here 

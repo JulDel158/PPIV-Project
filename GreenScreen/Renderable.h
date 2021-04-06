@@ -10,7 +10,6 @@
 using namespace std;
 //using Microsoft::WRL::ComPtr;
 
-
 //basic file loader (3DCC REFERENCE)
 std::vector<uint8_t> loadBlob(const char* filename)
 {

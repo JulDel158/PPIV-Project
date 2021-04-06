@@ -49,6 +49,7 @@ int main()
 					+d3d11.GetSwapchain((void**)&pSwapChain))
 				{
 					pDeviceContext->ClearRenderTargetView(pTargetView, clr);
+					renderer.Update();
 					renderer.Render();
 					pSwapChain->Present(1, 0);
 					// release incremented COM reference counts
