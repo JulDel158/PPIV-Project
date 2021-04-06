@@ -1,9 +1,13 @@
+#include <vector>
+#include <DirectXMath.h>
 #include "VertexShader.h"
 #include "PixelShader.h"
 #include "axe1.h"
 #include "test_pyramid.h"
 #include "Renderable.h"
 #pragma comment(lib, "d3dcompiler.lib")
+
+
 
 // Creation, Rendering & Cleanup
 class Renderer
@@ -15,6 +19,43 @@ class Renderer
 		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
 		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
 	};
+	
+	struct VertexData
+	{
+		DirectX::XMFLOAT3 pos;
+		DirectX::XMFLOAT3 uvw;
+		DirectX::XMFLOAT3 nrm;
+	};
+
+	template <typename T>
+	struct MeshData
+	{
+		std::vector<T> vertices;
+		std::vector<int> indicies;
+	};
+
+	//Simple function to load data from precompiled obj files into Mesh struct
+	MeshData<VertexData> LoadMeshFromHeader(const OBJ_VERT* vertexData, const unsigned int* indexData,
+		const int vertexCount, const int indexCount)
+	{
+		MeshData<VertexData> result;
+		//Loading vertex data
+		result.vertices.resize(vertexCount);
+		for (int i = 0; i < vertexCount; ++i)
+		{
+			result.vertices[i].pos = (DirectX::XMFLOAT3)vertexData[i].pos;
+			result.vertices[i].uvw = (DirectX::XMFLOAT3)vertexData[i].uvw;
+			result.vertices[i].nrm = (DirectX::XMFLOAT3)vertexData[i].nrm;
+		}
+		//Loading index data
+		result.indicies.resize(indexCount);
+		for (int i = 0; i < indexCount; ++i)
+		{
+			result.indicies[i] = indexData[i];
+		}
+
+		return result;
+	}
 
 	// proxy handles
 	GW::SYSTEM::GWindow win;
@@ -24,7 +65,9 @@ class Renderer
 	ID3D11RenderTargetView* view;
 	//Renderable object used to load pyramid obj
 	Renderable pyramid;
+	
 	Renderable axe;
+	
 
 	SHADER_VARS Vars;
 	
@@ -42,14 +85,15 @@ public:
 		ID3D11Device* pDevice = nullptr;
 		d3d.GetDevice((void**)&pDevice);
 
+		//loading obj data into mesh
+		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
+			test_pyramid_vertexcount, test_pyramid_indexcount);
+		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe1_data, axe1_indicies, axe1_vertexcount, axe1_indexcount);
 		
-
 		//making pyramid buffers
-		pyramid.CreateBuffers(pDevice, test_pyramid_data, test_pyramid_indicies, sizeof(test_pyramid_indicies),
-								test_pyramid_vertexcount, test_pyramid_indexcount);
-
-		axe.CreateBuffers(pDevice, axe1_data, axe1_indicies, sizeof(axe1_indicies), 
-								axe1_vertexcount, axe1_indexcount);
+		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
+		//making axe buffers
+		axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {

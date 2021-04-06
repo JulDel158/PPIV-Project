@@ -53,25 +53,28 @@ public:
 	Microsoft::WRL::ComPtr<ID3D11SamplerState> samplerState = nullptr;
 
 	// creates vertex and index buffers using mesh data
-	void CreateBuffers(ID3D11Device* device, const OBJ_VERT* vertices, const unsigned int* indices, 
-		SIZE_T indexSize, int vertexCount, int indexCount)
+	void CreateBuffers(ID3D11Device* device, float* vertices, vector<int> indices,
+		int vertexSize, int vertexCount)
 	{
-		vSize = sizeof(OBJ_VERT);
+		vSize = vertexSize;
 		vCount = vertexCount;
-		iCount = indexCount;
+		iCount = (int)indices.size();
 		
 		// Create Vertex Buffer
 		D3D11_SUBRESOURCE_DATA vData = {vertices, 0, 0};
-		CD3D11_BUFFER_DESC vDesc(sizeof(vertices), D3D11_BIND_VERTEX_BUFFER);
+		CD3D11_BUFFER_DESC vDesc = {};
 		vDesc.Usage = D3D11_USAGE_DEFAULT;
+		vDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 		vDesc.CPUAccessFlags = 0;
 		vDesc.ByteWidth = vCount * vSize;
 		device->CreateBuffer(&vDesc, &vData, vertexBuffer.ReleaseAndGetAddressOf());
-		
+
 		// create Index Buffer
-		D3D11_SUBRESOURCE_DATA iData = {indices, 0, 0 };
-		CD3D11_BUFFER_DESC iDesc(indexCount, D3D11_BIND_INDEX_BUFFER);
+		D3D11_SUBRESOURCE_DATA iData = {};
+		iData.pSysMem = indices.data();
+		CD3D11_BUFFER_DESC iDesc = {};
 		iDesc.Usage = D3D11_USAGE_DEFAULT;
+		iDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 		iDesc.CPUAccessFlags = 0;
 		iDesc.ByteWidth = sizeof(int) * iCount;
 		device->CreateBuffer(&iDesc, &iData, indexBuffer.ReleaseAndGetAddressOf());
