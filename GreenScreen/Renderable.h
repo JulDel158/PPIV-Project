@@ -141,7 +141,7 @@ public:
 		/*UINT strides = vSize;*/
 		if (vertexBuffer)
 		{
-			const UINT strides[] = { sizeof(OBJ_VERT) };
+			const UINT strides[] = { vSize };
 			const UINT offsets[] = { 0 };
 			ID3D11Buffer* const buffs[] = { vertexBuffer.Get() };
 			dContext->IASetVertexBuffers(0, ARRAYSIZE(buffs), buffs, strides, offsets);
