@@ -21,6 +21,7 @@ using namespace DirectX;
 
 IDXGISwapChain* pSwapChain;
 ID3D11DeviceContext* pDeviceContext;
+ID3D11DeviceContext* g_pImmediateContext = nullptr;
 ID3D11RenderTargetView* pTargetView;
 
 

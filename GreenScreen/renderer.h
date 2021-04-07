@@ -50,11 +50,129 @@ class Renderer
 		GW::MATH::GMATRIXF p = GW::MATH::GIdentityMatrixF;
 
 	}Vars;
+	
+	std::vector<uint8_t> load_binary_blob(const char* path)
+	{
+		std::vector<uint8_t> blob;
+
+		std::fstream file{ path, std::ios_base::in | std::ios_base::binary };
+
+		if (file.is_open())
+		{
+			file.seekg(0, std::ios_base::end);
+			blob.resize(file.tellg());
+			file.seekg(0, std::ios_base::beg);
+
+			file.read((char*)blob.data(), blob.size());
+
+			file.close();
+		}
+
+		return std::move(blob);
+	}
+
+	//struct ShaderBundle
+	//{
+	//	Microsoft::WRL::ComPtr<ID3D11InputLayout> InputLayout = nullptr;
+	//	Microsoft::WRL::ComPtr<ID3D11VertexShader> VertexShader = nullptr;
+	//	Microsoft::WRL::ComPtr<ID3D11PixelShader> PixelShader = nullptr;
+	//	Microsoft::WRL::ComPtr<ID3D11Buffer> ConstantBufferVS = nullptr;
+	//	Microsoft::WRL::ComPtr<ID3D11Buffer> ConstantBufferPS = nullptr;
+
+	//	HRESULT CreateVertexShaderAndInputLayoutFromFile(
+	//		ID3D11Device* device, const char* filename,
+	//		D3D11_INPUT_ELEMENT_DESC layout[], UINT numElements)
+	//	{
+	//		HRESULT hr = S_OK;
+
+	//		auto vs_blob = load_binary_blob(filename);
+
+	//		// Create the vertex shader
+	//		hr = device->CreateVertexShader(vs_blob.data(), vs_blob.size(), nullptr,
+	//			VertexShader.ReleaseAndGetAddressOf());
+	//		if (FAILED(hr))
+	//		{
+	//			return hr;
+	//		}
+
+	//		// Create the input layout
+	//		hr = device->CreateInputLayout(layout, numElements, vs_blob.data(),
+	//			vs_blob.size(),
+	//			InputLayout.ReleaseAndGetAddressOf());
+	//		return hr;
+	//	}
+
+	//	HRESULT CreatePixelShaderFromFile(ID3D11Device* device, const char* filename)
+	//	{
+	//		HRESULT hr = S_OK;
+
+	//		auto vs_blob = load_binary_blob(filename);
+
+	//		// Create the pixel shader
+	//		hr = device->CreatePixelShader(vs_blob.data(), vs_blob.size(), nullptr,
+	//			PixelShader.ReleaseAndGetAddressOf());
+	//		return hr;
+	//	}
+
+	//	HRESULT CreateConstantBufferVS(ID3D11Device* device, UINT size)
+	//	{
+	//		return CreateConstantBuffer(device, size, ConstantBufferVS);
+	//	}
+
+	//	HRESULT CreateConstantBufferPS(ID3D11Device* device, UINT size)
+	//	{
+	//		return CreateConstantBuffer(device, size, ConstantBufferPS);
+	//	}
+
+	//	HRESULT CreateConstantBuffer(ID3D11Device* device, UINT size,
+	//		Microsoft::WRL::ComPtr<ID3D11Buffer>& ConstantBuffer)
+	//	{
+	//		HRESULT hr = S_OK;
+	//		// Create the constant buffer
+	//		D3D11_BUFFER_DESC bd = {};
+	//		bd.Usage = D3D11_USAGE_DEFAULT;
+	//		bd.ByteWidth = size;
+	//		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	//		bd.CPUAccessFlags = 0;
+	//		hr = device->CreateBuffer(&bd, nullptr, &ConstantBuffer);
+	//		return hr;
+	//	}
+
+	//	void Bind(ID3D11DeviceContext* context)
+	//	{
+	//		if (ConstantBufferVS)
+	//			context->VSSetConstantBuffers(0, 1, ConstantBufferVS.GetAddressOf());
+	//		if (ConstantBufferPS)
+	//			context->PSSetConstantBuffers(0, 1, ConstantBufferPS.GetAddressOf());
+	//		if (InputLayout)
+	//			context->IASetInputLayout(InputLayout.Get());
+	//		if (VertexShader)
+	//			context->VSSetShader(VertexShader.Get(), nullptr, 0);
+	//		if (PixelShader)
+	//			context->PSSetShader(PixelShader.Get(), nullptr, 0);
+	//	}
+	//};
 	// math library handle
 	GW::MATH::GMatrix m;
-	ConstantBuffer cb1;
+
 
 public:
+
+
+
+
+		//Settting some of the light variables
+		XMFLOAT4 vLightDirs[2] =
+		{
+			XMFLOAT4(-0.577f, 0.577f, -0.577f, 1.0f),
+			XMFLOAT4(0.0f, 0.0f, -1.0f, 1.0f),
+		};
+		XMFLOAT4 vLightColors[2] =
+		{
+			XMFLOAT4(0.75f, 0.75f, 0.75f, 1.0f),
+			XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
+		};
+
 
 	HRESULT CreateBuffers(ID3D11Device* device)
 	{
@@ -79,6 +197,25 @@ public:
 		ID3D11Device* pDevice;
 		d3d.GetDevice((void**)&pDevice);
 		
+	//ConstantBuffer cb1;
+	//XMMATRIX       g_World;
+	//XMMATRIX       g_View;
+	//XMMATRIX       g_Projection;
+	//ShaderBundle meshShaderBundle;
+
+
+	//g_World.r[3] = { 0.0f, 1.0f, 3.0f, 2.0f };
+	//cb1.mWorld = XMMatrixTranspose(g_World);
+	//cb1.mView = XMMatrixTranspose(g_View);
+	//cb1.mProjection = XMMatrixTranspose(g_Projection);
+	//cb1.vLightDir[0] = vLightDirs[0];
+	//cb1.vLightDir[1] = vLightDirs[1];
+	//cb1.vLightColor[0] = vLightColors[0];
+	//cb1.vLightColor[1] = vLightColors[1];
+	//cb1.vOutputColor = XMFLOAT4(0, 0, 0, 0);
+	//con->UpdateSubresource(meshShaderBundle.ConstantBufferVS.Get(), 0, nullptr, &cb1, 0, 0);  //==========================  hey this is the light stuff you wer working on 
+
+
 		CreateBuffers(pDevice);
 		
 		// Create Vertex Shader
@@ -155,17 +292,6 @@ public:
 				timeStart = timeCur;
 			t = (timeCur - timeStart) / 1000.0f;
 		}
-		//Settting some of the light variables
-		XMFLOAT4 vLightDirs[2] =
-		{
-			XMFLOAT4(-0.577f, 0.577f, -0.577f, 1.0f),
-			XMFLOAT4(0.0f, 0.0f, -1.0f, 1.0f),
-		};
-		XMFLOAT4 vLightColors[2] =
-		{
-			XMFLOAT4(0.75f, 0.75f, 0.75f, 1.0f),
-			XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
-		};
 
 
 		//setting lighting stuff and hoping to god it doesn't fuck things up
