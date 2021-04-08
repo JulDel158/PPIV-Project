@@ -335,14 +335,14 @@ public:
 	//Use to update things such as camera movement, world matrix, etc
 	void Update()
 	{
-		static float t = 0.0f;
+		/*static float t = 0.0f;
 		static ULONGLONG timeStart = 0;
 		ULONGLONG timeCur = GetTickCount64();
 		if (timeStart == 0)
 			timeStart = timeCur;
 		t = (timeCur - timeStart) / 1000.0f;
 		
-		m.RotationYF(Vars.world, t, Vars.world);
+		m.RotationYF(Vars.world, t, Vars.world);*/
 	}
 
 	~Renderer()

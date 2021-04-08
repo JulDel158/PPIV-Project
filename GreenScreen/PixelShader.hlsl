@@ -1,11 +1,6 @@
 
 
 //Constant Buffer Varibles 
-
-//Texture3D txDiffuse : register(t0);
-//SamplerState samLinear : register(s0);
-
-
 cbuffer SHADER_VARS : register(b0)
 {
     matrix world;
@@ -30,8 +25,12 @@ struct PS_INPUT
 // an ultra simple hlsl pixel shader
 float4 main(PS_INPUT input) : SV_TARGET 
 {	
-    
-    float4 finalColor = (0.5f, 0.5f, 0.5f, 1.0f);
-    
+    float4 finalColor = { 0.5f, 0.5f, 0.5f, 1.0f };
+    float4 ldir = { -0.5f, 0.0f, 0.0f, 1.0f };
+    float4 lcolor = { 0.5f, 0.0f, 0.9f, 1.0f };
+    finalColor += saturate((dot((float3) ldir, input.nrm) + 0.25f) * lcolor);
+    //finalColor = saturate(lcolor + finalColor);
+    finalColor.a = 1.0f;
+    //finalColor = (0.0f, 1.0f, 0.0f, 1.0f);
     return finalColor;
 }
