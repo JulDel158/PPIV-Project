@@ -30,9 +30,9 @@ PS_INPUT main(VS_INPUT input)
     PS_INPUT output = (PS_INPUT) 0;
     output.pos = input.pos;
 	// do w * v * p
-	output.pos = mul(world, input.pos);
-    output.pos = mul(view, output.pos);
-    output.pos = mul(projection, output.pos);
+    output.pos = mul(input.pos, world);
+    output.pos = mul(output.pos, view);
+    output.pos = mul(output.pos, projection);
 
 	return output;
 }

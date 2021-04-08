@@ -19,10 +19,9 @@ using namespace SYSTEM;
 using namespace GRAPHICS;
 using namespace DirectX;
 
-IDXGISwapChain* pSwapChain;
-ID3D11DeviceContext* pDeviceContext;
-ID3D11DeviceContext* g_pImmediateContext = nullptr;
-ID3D11RenderTargetView* pTargetView;
+IDXGISwapChain* pSwapChain = nullptr;
+ID3D11DeviceContext* pDeviceContext = nullptr;
+ID3D11RenderTargetView* pTargetView = nullptr;
 
 
 
@@ -54,15 +53,13 @@ int main()
 					+d3d11.GetSwapchain((void**)&pSwapChain))
 				{
 					pDeviceContext->ClearRenderTargetView(pTargetView, clr);
+					renderer.Update();
 					renderer.Render();
 					pSwapChain->Present(1, 0);
 					// release incremented COM reference counts
 					CleanUp();
 				}
 			}
-
-			
-			
 		}
 	}
 	return 0; // that's all folks
@@ -70,6 +67,7 @@ int main()
 
 void CleanUp()
 {
+	
 	if (pSwapChain) pSwapChain->Release();
 	if (pTargetView) pTargetView->Release();
 	if (pDeviceContext) pDeviceContext->Release();

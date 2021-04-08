@@ -1,9 +1,10 @@
-// minimalistic code to draw a single triangle, this is not part of the API.
-// required for compiling shaders on the fly, consider pre-compiling instead
-#include <d3dcompiler.h>
-#include "test_pyramid.h"
+#include <vector>
+#include <DirectXMath.h>
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "axe1.h"
+#include "test_pyramid.h"
+#include "Renderable.h"
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3d11_1.h>
 #include <directxmath.h>
@@ -14,20 +15,65 @@ using namespace DirectX;
 // Creation, Rendering & Cleanup
 class Renderer
 {
+	// world, view, projection matrices (constant buffer)
+	struct SHADER_VARS
+	{
+		GW::MATH::GMATRIXF world = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
+	};
+	
+	struct VertexData
+	{
+		DirectX::XMFLOAT3 pos;
+		DirectX::XMFLOAT3 uvw;
+		DirectX::XMFLOAT3 nrm;
+	};
+
+	template <typename T>
+	struct MeshData
+	{
+		std::vector<T> vertices;
+		std::vector<int> indicies;
+	};
+
+	//Simple function to load data from precompiled obj files into Mesh struct
+	MeshData<VertexData> LoadMeshFromHeader(const OBJ_VERT* vertexData, const unsigned int* indexData,
+		const int vertexCount, const int indexCount)
+	{
+		MeshData<VertexData> result;
+		//Loading vertex data
+		result.vertices.resize(vertexCount);
+		for (int i = 0; i < vertexCount; ++i)
+		{
+			result.vertices[i].pos = (DirectX::XMFLOAT3)vertexData[i].pos;
+			result.vertices[i].uvw = (DirectX::XMFLOAT3)vertexData[i].uvw;
+			result.vertices[i].nrm = (DirectX::XMFLOAT3)vertexData[i].nrm;
+		}
+		//Loading index data
+		result.indicies.resize(indexCount);
+		for (int i = 0; i < indexCount; ++i)
+		{
+			result.indicies[i] = indexData[i];
+		}
+
+		return result;
+	}
+
 	// proxy handles
 	GW::SYSTEM::GWindow win;
 	GW::GRAPHICS::GDirectX11Surface d3d;
 	// device and target view
 	ID3D11DeviceContext* con;
 	ID3D11RenderTargetView* view;
-	// what we need at a minimum to draw a triangle
-	Microsoft::WRL::ComPtr<ID3D11Buffer>		vertexBuffer;
-	Microsoft::WRL::ComPtr<ID3D11Buffer>		indexBuffer;
-	//Shaders
-	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vShader;
-	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader;
-	Microsoft::WRL::ComPtr<ID3D11InputLayout>	vertexFormat;
+	//Renderable object used to load pyramid obj
+	Renderable pyramid;
+	
+	Renderable axe;
+	
 
+	SHADER_VARS Vars;
+	
 	D3D_DRIVER_TYPE         g_driverType = D3D_DRIVER_TYPE_NULL; // a thing we need for lights 
 
 	// world view proj
@@ -43,13 +89,8 @@ class Renderer
 		XMFLOAT4 vOutputColor;
 	};
 
-	struct SHADER_VARS
-	{
-		GW::MATH::GMATRIXF w = GW::MATH::GIdentityMatrixF;
-		GW::MATH::GMATRIXF v = GW::MATH::GIdentityMatrixF;
-		GW::MATH::GMATRIXF p = GW::MATH::GIdentityMatrixF;
-
-	}Vars;
+	
+	
 	
 	std::vector<uint8_t> load_binary_blob(const char* path)
 	{
@@ -155,7 +196,6 @@ class Renderer
 	// math library handle
 	GW::MATH::GMatrix m;
 
-
 public:
 
 
@@ -174,29 +214,22 @@ public:
 		};
 
 
-	HRESULT CreateBuffers(ID3D11Device* device)
-	{
-		HRESULT hr = S_OK;
-		// Create Vertex Buffer
-		D3D11_SUBRESOURCE_DATA bData = { test_pyramid_data, 0, 0 };
-		CD3D11_BUFFER_DESC bDesc(sizeof(test_pyramid_data), D3D11_BIND_VERTEX_BUFFER);
-		hr = device->CreateBuffer(&bDesc, &bData, vertexBuffer.GetAddressOf());
-
-		// create Index Buffer
-		D3D11_SUBRESOURCE_DATA iData = { test_pyramid_indicies, 0, 0 };
-		CD3D11_BUFFER_DESC iDesc(sizeof(test_pyramid_indicies), D3D11_BIND_INDEX_BUFFER);
-		hr = device->CreateBuffer(&iDesc, &iData, indexBuffer.GetAddressOf());
-
-		return hr;
-	}
-
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 	{
 		win = _win;
 		d3d = _d3d;
-		ID3D11Device* pDevice;
+		ID3D11Device* pDevice = nullptr;
 		d3d.GetDevice((void**)&pDevice);
+
+		//loading obj data into mesh
+		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
+			test_pyramid_vertexcount, test_pyramid_indexcount);
+		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe1_data, axe1_indicies, axe1_vertexcount, axe1_indexcount);
 		
+		//making pyramid buffers
+		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
+		//making axe buffers
+		axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
 	//ConstantBuffer cb1;
 	//XMMATRIX       g_World;
 	//XMMATRIX       g_View;
@@ -216,7 +249,7 @@ public:
 	//con->UpdateSubresource(meshShaderBundle.ConstantBufferVS.Get(), 0, nullptr, &cb1, 0, 0);  //==========================  hey this is the light stuff you wer working on 
 
 
-		CreateBuffers(pDevice);
+		//CreateBuffers(pDevice);
 		
 		// Create Vertex Shader
 		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
@@ -229,9 +262,6 @@ public:
 
 
 
-		// Setting vertex shader
-		pDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr,
-			vShader.ReleaseAndGetAddressOf());
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -248,33 +278,37 @@ public:
 				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
 			}
 		};
-		
-		//Setting pixel Shader
-		pDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr,
-			pShader.ReleaseAndGetAddressOf());
 
-		//Setting input layout
-		pDevice->CreateInputLayout(format, ARRAYSIZE(format), VertexShader, ARRAYSIZE(VertexShader), 
-			vertexFormat.GetAddressOf());
+		//creating v/p shaders and input layout
+		pyramid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+
+		axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
 		//init math stuff
 		m.Create();
-		m.LookAtLHF(GW::MATH::GVECTORF{ 0.5f, 1.0f, -2.0f }, //eye
-					GW::MATH::GVECTORF{ 0,0.5f,0 }, //at
+		// Initializing identity matrix
+		//m.IdentityF(Vars.world);
+		
+		// Initializing view matrix
+		m.LookAtLHF(GW::MATH::GVECTORF{ 15.0f, 6.0f, 2.0f }, //eye
+					GW::MATH::GVECTORF{ 0,0.0f,0 }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
-					Vars.v);
+					Vars.view);
 		float ar;
 		d3d.GetAspectRatio(ar);
-		m.ProjectionDirectXLHF(G_PI_F / 2.0f, ar, 0.01f, 100, Vars.p);
+		//Initializing projection matrix
+		m.ProjectionDirectXLHF(G_PI_F / 2.0f, ar, 0.01f, 100, Vars.projection);
 
 		// create constant buffer
-		D3D11_SUBRESOURCE_DATA cData = { &Vars, 0, 0 };
-		CD3D11_BUFFER_DESC cDesc(sizeof(Vars), D3D11_BIND_CONSTANT_BUFFER);
-		pDevice->CreateBuffer(&cDesc, &cData, constantBuffer.GetAddressOf());
+		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 
 		// free temporary handle
 		pDevice->Release();
 	}
+	//Bind objects to render and update constant buffers 
 	void Render()
 	{
 
@@ -317,26 +351,45 @@ public:
 		// setup the pipeline
 		ID3D11RenderTargetView *const views[] = { view };
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, nullptr);
-		const UINT strides[] = { sizeof(OBJ_VERT) };
-		const UINT offsets[] = { 0 };
-		ID3D11Buffer* const buffs[] = { vertexBuffer.Get() };
-		con->IASetVertexBuffers(0, ARRAYSIZE(buffs), buffs, strides, offsets);
-		con->IASetIndexBuffer(indexBuffer.Get(), DXGI_FORMAT_R32_UINT, 0);
-		con->VSSetShader(vShader.Get(), nullptr, 0);
-		con->PSSetShader(pShader.Get(), nullptr, 0);
-		con->IASetInputLayout(vertexFormat.Get());
-		// send in the constant buffer
-		ID3D11Buffer* const constants[] = { constantBuffer.Get() };
-		con->VSSetConstantBuffers(0, 1, constants);
-		// to update dynamically *****
-		// con->UpdateSubresource()
-		// now we can draw
-		con->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		con->DrawIndexed(test_pyramid_indexcount, 0, 0);
+
+		SHADER_VARS pcb;
+		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
+		m.ScalingF(pcb.world, scale, pcb.world);
+		m.TransposeF(pcb.world, pcb.world);
+		m.TransposeF(Vars.view, pcb.view);
+		m.TransposeF(Vars.projection, pcb.projection);
+
+		//Preparing to draw pyramid
+		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		pyramid.Bind(con);
+		pyramid.Draw(con);
+
+		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
+		m.ScalingF(Vars.world, scale, pcb.world);
+		m.TransposeF(pcb.world, pcb.world);
+
+		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		axe.Bind(con);
+		axe.Draw(con);
+
 		// release temp handles
 		view->Release();
 		con->Release();
 	}
+
+	//Use to update things such as camera movement, world matrix, etc
+	void Update()
+	{
+		static float t = 0.0f;
+		static ULONGLONG timeStart = 0;
+		ULONGLONG timeCur = GetTickCount64();
+		if (timeStart == 0)
+			timeStart = timeCur;
+		t = (timeCur - timeStart) / 1000.0f;
+		
+		m.RotationYF(Vars.world, t, Vars.world);
+	}
+
 	~Renderer()
 	{
 		// ComPtr will auto release so nothing to do here 
