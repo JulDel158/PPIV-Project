@@ -34,7 +34,7 @@ struct PS_INPUT
 float4 main(PS_INPUT input) : SV_TARGET 
 {	
     
-    float4 finalColor = (1.0f, 1.0f, 1.0f, 1.0f);
+    float4 finalColor = (input.uvw.r, input.uvw.g, input.uvw.b, 1.0f);
     
     ////do NdotL lighting for 2 lights
     //for (int i = 0; i < 2; i++)
