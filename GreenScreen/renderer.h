@@ -2,9 +2,9 @@
 #include <DirectXMath.h>
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "Renderable.h"
 #include "axe1.h"
 #include "test_pyramid.h"
-#include "Renderable.h"
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3d11_1.h>
 #include <directxmath.h>
@@ -60,6 +60,44 @@ class Renderer
 		return result;
 	}
 
+	MeshData<VertexData> MakeGrid(float size = 0, float spacing = 0)
+	{
+		MeshData<VertexData> grid;
+		if (size == 0 || spacing == 0)
+		{
+			size = 100.0f + static_cast <float>(rand()) / (static_cast <float>(RAND_MAX / 100.0f));
+			spacing = 0.5f + static_cast <float>(rand()) / (static_cast <float>(RAND_MAX / 4.5f));
+		}
+
+		const float lines = size / spacing;
+		float x = -size / 2.0f;
+		float z = -size / 2.0f;
+		int i = 0;
+		for (int p = 0; p < lines; ++p)
+		{
+			VertexData line1 = { {x,0,z}, {0,0,0}, {0,0,0} };
+			VertexData line2 = { {x + size, 0, z}, {0,0,0}, {0,0,0} };
+			grid.vertices.push_back(line1);
+			grid.indicies.push_back(i++);
+			grid.vertices.push_back(line2);
+			grid.indicies.push_back(i++);
+			z += spacing;
+		}
+
+		z = -size / 2.0f;
+		for (int p = 0; p < lines; ++p)
+		{
+			VertexData line1 = { {x,0,z}, {0,0,0}, {0,0,0} };
+			VertexData line2 = { {x, 0, z + size}, {0,0,0}, {0,0,0} };
+			grid.vertices.push_back(line1);
+			grid.indicies.push_back(i++);
+			grid.vertices.push_back(line2);
+			grid.indicies.push_back(i++);
+			x += spacing;
+		}
+		return grid;
+	}
+
 	// proxy handles
 	GW::SYSTEM::GWindow win;
 	GW::GRAPHICS::GDirectX11Surface d3d;
@@ -68,10 +106,8 @@ class Renderer
 	ID3D11RenderTargetView* view;
 	//Renderable object used to load pyramid obj
 	Renderable pyramid;
-	
 	Renderable axe;
-	
-
+	Renderable grid;
 	SHADER_VARS Vars;
 	
 	D3D_DRIVER_TYPE         g_driverType = D3D_DRIVER_TYPE_NULL; // a thing we need for lights 
@@ -216,6 +252,7 @@ public:
 
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 	{
+		srand(time(NULL));
 		win = _win;
 		d3d = _d3d;
 		ID3D11Device* pDevice = nullptr;
@@ -225,11 +262,14 @@ public:
 		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
 			test_pyramid_vertexcount, test_pyramid_indexcount);
 		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe1_data, axe1_indicies, axe1_vertexcount, axe1_indexcount);
+		MeshData<VertexData> gMesh = MakeGrid();
 		
-		//making pyramid buffers
+		//making pyramid index and vertex buffers
 		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
 		//making axe buffers
 		axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
+		//making grid buffers
+		grid.CreateBuffers(pDevice, (float*)gMesh.vertices.data(), gMesh.indicies, sizeof(VertexData), gMesh.vertices.size());
 	//ConstantBuffer cb1;
 	//XMMATRIX       g_World;
 	//XMMATRIX       g_View;
@@ -251,12 +291,12 @@ public:
 
 		//CreateBuffers(pDevice);
 		
-		// Create Vertex Shader
-		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if _DEBUG
-		compilerFlags |= D3DCOMPILE_DEBUG;
-#endif
-
+//		// Create Vertex Shader
+//		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+//#if _DEBUG
+//		compilerFlags |= D3DCOMPILE_DEBUG;
+//#endif
+//
 
 
 
@@ -286,10 +326,11 @@ public:
 		axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
+		grid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+
 		//init math stuff
 		m.Create();
-		// Initializing identity matrix
-		//m.IdentityF(Vars.world);
 		
 		// Initializing view matrix
 		m.LookAtLHF(GW::MATH::GVECTORF{ 15.0f, 6.0f, 2.0f }, //eye
@@ -304,6 +345,8 @@ public:
 		// create constant buffer
 		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		grid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		grid.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 
 		// free temporary handle
 		pDevice->Release();
@@ -311,6 +354,8 @@ public:
 	//Bind objects to render and update constant buffers 
 	void Render()
 	{
+		GW::MATH::GMATRIXF temp;
+		m.IdentityF(temp);
 
 		// Update our time
 		static float t = 0.0f;
@@ -353,12 +398,18 @@ public:
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, nullptr);
 
 		SHADER_VARS pcb;
-		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
-		m.ScalingF(pcb.world, scale, pcb.world);
+		
 		m.TransposeF(pcb.world, pcb.world);
 		m.TransposeF(Vars.view, pcb.view);
 		m.TransposeF(Vars.projection, pcb.projection);
 
+		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		grid.Bind(con);
+		grid.Draw(con);
+
+		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
+		m.ScalingF(temp, scale, pcb.world);
+		m.TransposeF(pcb.world, pcb.world);
 		//Preparing to draw pyramid
 		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
