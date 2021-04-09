@@ -343,6 +343,8 @@ public:
 		//Vars.time = (timeCur - timeStart) / 10000.0f;
 		Vars.time += 0.00001f;
 		m.RotationYF(Vars.world, Vars.time, Vars.world);
+
+
 	}
 
 	~Renderer()
