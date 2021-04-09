@@ -345,13 +345,6 @@ public:
 		m.RotationYF(Vars.world, t, Vars.world);*/
 
 
-
-		// Rotate the second light around the origin
-		XMMATRIX mRotate = XMMatrixRotationY(-1.0f * t); //now should be able to rotate lights at the same kind of time for the axe
-		XMVECTOR vLightDir = XMLoadFloat4(&vLightDirs[1]);
-		// rotates the second light
-		vLightDir = XMVector3Transform(vLightDir, mRotate);
-		XMStoreFloat4(&vLightDirs[1], vLightDir);
 	}
 
 	~Renderer()
