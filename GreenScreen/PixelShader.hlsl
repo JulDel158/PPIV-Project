@@ -6,6 +6,7 @@ cbuffer SHADER_VARS : register(b0)
     matrix world;
     matrix view;
     matrix projection;
+    float time;
 }
 
 struct VS_INPUT
@@ -25,12 +26,13 @@ struct PS_INPUT
 // an ultra simple hlsl pixel shader
 float4 main(PS_INPUT input) : SV_TARGET 
 {	
+    //white color
     float4 finalColor = { 0.5f, 0.5f, 0.5f, 1.0f };
+    // direction of light
     float4 ldir = { -0.5f, 0.0f, 0.0f, 1.0f };
+    // color of light
     float4 lcolor = { 0.5f, 0.0f, 0.9f, 1.0f };
-    finalColor += saturate((dot((float3) ldir, input.nrm) + 0.25f) * lcolor);
-    //finalColor = saturate(lcolor + finalColor);
-    finalColor.a = 1.0f;
-    //finalColor = (0.0f, 1.0f, 0.0f, 1.0f);
+    //combining light with white based on normal of vertex
+    finalColor += saturate((dot((float3) ldir, input.nrm) + 0.35f) * lcolor);
     return finalColor;
 }

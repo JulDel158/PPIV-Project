@@ -5,6 +5,7 @@
 #include "Renderable.h"
 #include "axe1.h"
 #include "test_pyramid.h"
+#include "Wave_VS.h"
 #pragma comment(lib, "d3dcompiler.lib")
 #include <d3d11_1.h>
 #include <directxmath.h>
@@ -16,11 +17,13 @@ using namespace DirectX;
 class Renderer
 {
 	// world, view, projection matrices (constant buffer)
+	_declspec(align(16))
 	struct SHADER_VARS
 	{
 		GW::MATH::GMATRIXF world = GW::MATH::GIdentityMatrixF;
 		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
 		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
+		float time = 0;
 	};
 	
 	struct VertexData
@@ -191,9 +194,6 @@ class Renderer
 	Renderable testObj;
 	SHADER_VARS Vars;
 
-	// world view proj
-	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
-
 	// math library handle
 	GW::MATH::GMatrix m;
 
@@ -239,7 +239,7 @@ public:
 				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
 			}
 		};
-
+		
 		//creating v/p shaders and input layout
 		pyramid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
@@ -247,17 +247,17 @@ public:
 		axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
-		grid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
+		testObj.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
-		testObj.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
+		grid.CreateShadersandInputLayout(pDevice, Wave_VS, ARRAYSIZE(Wave_VS),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
 		//init math stuff
 		m.Create();
-		
+		//Vars.time = 0.0f;
 		// Initializing view matrix
-		m.LookAtLHF(GW::MATH::GVECTORF{ 15.0f, 6.0f, 2.0f }, //eye
+		m.LookAtLHF(GW::MATH::GVECTORF{ 50.0f, 15.0f, 50.0f }, //eye
 					GW::MATH::GVECTORF{ 0,0.0f,0 }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
@@ -292,12 +292,12 @@ public:
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, nullptr);
 
 		SHADER_VARS pcb;
-		
-		m.TransposeF(pcb.world, pcb.world);
+		pcb.time = Vars.time;
+		m.TransposeF(Vars.projection, pcb.projection);
 		m.TransposeF(Vars.view, pcb.view);
+		m.TransposeF(pcb.world, pcb.world);
 
 		//drawing grid
-		m.TransposeF(Vars.projection, pcb.projection);
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		grid.Draw(con);
@@ -306,7 +306,7 @@ public:
 		m.ScalingF(temp, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 
-		//drawing pyramid
+		////drawing pyramid
 		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
 		pyramid.Draw(con);
@@ -335,14 +335,14 @@ public:
 	//Use to update things such as camera movement, world matrix, etc
 	void Update()
 	{
-		/*static float t = 0.0f;
+		//static float t = 0.0f;
 		static ULONGLONG timeStart = 0;
 		ULONGLONG timeCur = GetTickCount64();
 		if (timeStart == 0)
 			timeStart = timeCur;
-		t = (timeCur - timeStart) / 1000.0f;
-		
-		m.RotationYF(Vars.world, t, Vars.world);*/
+		//Vars.time = (timeCur - timeStart) / 10000.0f;
+		Vars.time += 0.00001f;
+		m.RotationYF(Vars.world, Vars.time, Vars.world);
 	}
 
 	~Renderer()

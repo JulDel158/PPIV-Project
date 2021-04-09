@@ -3,11 +3,12 @@
 
 // by default HLSL is COLUMN major
 //constant buffer
-cbuffer SHADER_VARS
+cbuffer SHADER_VARS : register(b0)
 {
 	matrix world;
 	matrix view;
 	matrix projection;
+    float time;
 }
 
 struct VS_INPUT
@@ -32,7 +33,7 @@ PS_INPUT main(VS_INPUT input)
     output.uvw = input.uvw;
     output.pos = input.pos;
 	// do w * v * p
-    output.pos = mul(input.pos, world);
+    output.pos = mul(output.pos, world);
     output.pos = mul(output.pos, view);
     output.pos = mul(output.pos, projection);
 
