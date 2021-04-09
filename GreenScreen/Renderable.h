@@ -83,14 +83,15 @@ public:
 		}
 	}
 
-	void CreateTexture_Sampler(ID3D11Device* device, std::string filename)
+	void CreateTextureandSampler(ID3D11Device* device, std::string filename)
 	{
+		 
 		// load texture here -------------------------
 		std::wstring wstr = std::wstring(filename.begin(), filename.end());
 		const wchar_t* wcstr = wstr.c_str();
-		CreateDDSTextureFromFile(device, wcstr, nullptr,
+		HRESULT hr = CreateDDSTextureFromFile(device, wcstr, nullptr,
 			sResourceView.ReleaseAndGetAddressOf());
-
+		int potato = 5;
 		//Creating sampler
 		D3D11_SAMPLER_DESC sd = {};
 		sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -100,7 +101,7 @@ public:
 		sd.ComparisonFunc = D3D11_COMPARISON_NEVER;
 		sd.MinLOD = 0;
 		sd.MaxLOD = D3D11_FLOAT32_MAX;
-		device->CreateSamplerState(&sd, samplerState.ReleaseAndGetAddressOf());
+		hr = device->CreateSamplerState(&sd, samplerState.ReleaseAndGetAddressOf());
 	}
 
 	void CreateShadersandInputLayout(ID3D11Device* device, const BYTE* vertexShader, SIZE_T vByteLength, 
@@ -141,7 +142,7 @@ public:
 			dContext->PSSetShaderResources(0, 1, sResourceView.GetAddressOf());
 		if(samplerState)
 			dContext->PSSetSamplers(0, 1, samplerState.GetAddressOf());
-		/*UINT strides = vSize;*/
+
 		if (vertexBuffer)
 		{
 			const UINT strides[] = { vSize };

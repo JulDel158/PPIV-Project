@@ -62,20 +62,20 @@ class Renderer
 			// else : parse lineHeader
 			if (strcmp(lineHeader, "v") == 0) 
 			{
-				XMFLOAT3 vertex;
+				XMFLOAT3 vertex = { 0,0,0 };
 				fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z);
 				temp_vertices.push_back(vertex);
 			}
 			else if (strcmp(lineHeader, "vt") == 0)
 			{
-				XMFLOAT3 uv;
+				XMFLOAT3 uv = { 0,0,0 };
 				fscanf(file, "%f %f\n", &uv.x, &uv.y);
 				uv.z = 0.0f;
 				temp_uvs.push_back(uv);
 			}
 			else if (strcmp(lineHeader, "vn") == 0)
 			{
-				XMFLOAT3 nrm;
+				XMFLOAT3 nrm = { 0,0,0 };
 				fscanf(file, "%f %f %f\n", &nrm.x, &nrm.y, &nrm.z);
 				temp_normals.push_back(nrm);
 			}
@@ -206,7 +206,7 @@ public:
 		d3d = _d3d;
 		ID3D11Device* pDevice = nullptr;
 		d3d.GetDevice((void**)&pDevice);
-
+		
 		//loading obj data into mesh
 		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
 			test_pyramid_vertexcount, test_pyramid_indexcount);
@@ -215,6 +215,13 @@ public:
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
 		
+		//Setting texture + sampler
+		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		pyramid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		grid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		testObj.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+
+
 		//making pyramid index and vertex buffers
 		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
 		//making axe buffers
@@ -257,7 +264,7 @@ public:
 		m.Create();
 		//Vars.time = 0.0f;
 		// Initializing view matrix
-		m.LookAtLHF(GW::MATH::GVECTORF{ 50.0f, 15.0f, 50.0f }, //eye
+		m.LookAtLHF(GW::MATH::GVECTORF{ 10.0f, 10.0f, 10.0f }, //eye
 					GW::MATH::GVECTORF{ 0,0.0f,0 }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
@@ -298,26 +305,26 @@ public:
 		m.TransposeF(pcb.world, pcb.world);
 
 		//drawing grid
-		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		/*con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
-		grid.Draw(con);
+		grid.Draw(con);*/
 
 		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 
 		////drawing pyramid
-		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		/*con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
-		pyramid.Draw(con);
+		pyramid.Draw(con);*/
 
 		//drawing test object
 		GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		/*con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		testObj.Bind(con);
-		testObj.Draw(con);
+		testObj.Draw(con);*/
 
 		//drawing axe
 		scale = { 0.3f, 0.3f, 0.3f, 1.0f };

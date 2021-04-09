@@ -1,4 +1,5 @@
-
+Texture2D txDiffuse : register(t0);
+SamplerState samLinear : register(s0);
 
 //Constant Buffer Varibles 
 cbuffer SHADER_VARS : register(b0)
@@ -34,5 +35,6 @@ float4 main(PS_INPUT input) : SV_TARGET
     float4 lcolor = { 0.5f, 0.0f, 0.9f, 1.0f };
     //combining light with white based on normal of vertex
     finalColor += saturate((dot((float3) ldir, input.nrm) + 0.35f) * lcolor);
+    finalColor *= txDiffuse.Sample(samLinear, (float2) input.uvw);
     return finalColor;
 }
