@@ -28,6 +28,8 @@ struct PS_INPUT
 PS_INPUT main(VS_INPUT input)
 {
     PS_INPUT output = (PS_INPUT) 0;
+    output.nrm = input.nrm;
+    output.uvw = input.uvw;
     output.pos = input.pos;
 	// do w * v * p
     output.pos = mul(input.pos, world);

@@ -13,6 +13,7 @@ ADD_DEFINITIONS(-D_UNICODE)
 set(VERTEX_SHADERS 
 	# add vertex shader (.hlsl) files here
 	VertexShader.hlsl
+	Wave_VS.hlsl
 )
 set(PIXEL_SHADERS 
 	# add pixel shader (.hlsl) files here
@@ -31,6 +32,7 @@ add_executable (GreenScreen
 	DDSTextureLoader.cpp
 	DDSTextureLoader.h
 	axe1.h
+	Wave_VS.h
 	${VERTEX_SHADERS}
 	${PIXEL_SHADERS}
 )

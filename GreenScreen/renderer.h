@@ -37,6 +37,89 @@ class Renderer
 		std::vector<int> indicies;
 	};
 
+	bool LoadMeshFromOBJ(const char* path, MeshData<VertexData>& container)
+	{
+		//bool result = false;
+		std::vector< unsigned int > vertexIndices, uvIndices, normalIndices;
+		std::vector<XMFLOAT3> temp_vertices, temp_uvs, temp_normals;
+		std::vector <XMFLOAT3> out_vertices, out_uvs, out_normals;
+
+		FILE* file = fopen(path, "r");
+		if (file == NULL) {
+			printf("Impossible to open the file !\n");
+			return false;
+		}
+		while (true)
+		{
+			char lineHeader[128];
+			int res = fscanf(file, "%s", lineHeader);
+			if (res == EOF)
+				break; // EOF = End Of File. Quit the loop.
+
+			// else : parse lineHeader
+			if (strcmp(lineHeader, "v") == 0) 
+			{
+				XMFLOAT3 vertex;
+				fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z);
+				temp_vertices.push_back(vertex);
+			}
+			else if (strcmp(lineHeader, "vt") == 0)
+			{
+				XMFLOAT3 uv;
+				fscanf(file, "%f %f\n", &uv.x, &uv.y);
+				uv.z = 0.0f;
+				temp_uvs.push_back(uv);
+			}
+			else if (strcmp(lineHeader, "vn") == 0)
+			{
+				XMFLOAT3 nrm;
+				fscanf(file, "%f %f %f\n", &nrm.x, &nrm.y, &nrm.z);
+				temp_normals.push_back(nrm);
+			}
+			else if (strcmp(lineHeader, "f") == 0) {
+				std::string vertex1, vertex2, vertex3;
+				unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
+				int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n",  
+					&vertexIndex[0], &uvIndex[0], &normalIndex[0], 											    
+					&vertexIndex[1], &uvIndex[1], &normalIndex[1], 												
+					&vertexIndex[2], &uvIndex[2], &normalIndex[2]);
+
+				if (matches != 9) {
+					printf("File can't be read by our simple parser : ( Try exporting with other options\n");
+					return false;
+				}
+
+				for (int i = 0; i < 3; ++i)
+				{
+					vertexIndices.push_back(vertexIndex[i]);
+					uvIndices.push_back(uvIndex[i]);
+					normalIndices.push_back(normalIndex[i]);
+				}
+			}
+		}
+
+		for (int i = 0; i < vertexIndices.size(); ++i)
+		{
+			VertexData entry;
+			//pos
+			unsigned int vertexIndex = vertexIndices[i] - 1;
+			XMFLOAT3 vertex = temp_vertices[vertexIndex];
+			entry.pos = vertex;
+			// uvs
+			unsigned int uvIndex = uvIndices[i] - 1;
+			XMFLOAT3 uvw = temp_uvs[uvIndex];
+			entry.uvw = uvw;
+			//nrm
+			unsigned int nrmIndex = normalIndices[i] - 1;
+			XMFLOAT3 nrm = temp_uvs[nrmIndex];
+			entry.nrm = nrm;
+
+			container.vertices.push_back(entry);
+			container.indicies.push_back(i);
+		}
+		return true;
+	}
+
 	//Simple function to load data from precompiled obj files into Mesh struct
 	MeshData<VertexData> LoadMeshFromHeader(const OBJ_VERT* vertexData, const unsigned int* indexData,
 		const int vertexCount, const int indexCount)
@@ -71,28 +154,25 @@ class Renderer
 
 		const float lines = size / spacing;
 		float x = -size / 2.0f;
-		float z = -size / 2.0f;
+		float z = x;
+		const float cz = x;
+		const float cx = x;
 		int i = 0;
 		for (int p = 0; p < lines; ++p)
 		{
-			VertexData line1 = { {x,0,z}, {0,0,0}, {0,0,0} };
-			VertexData line2 = { {x + size, 0, z}, {0,0,0}, {0,0,0} };
+			VertexData line1 = { {cx,0,z}, {0,0,0}, {0,0,0} };
+			VertexData line2 = { {cx + size, 0, z}, {0,0,0}, {0,0,0} };
+			VertexData line3 = { {x,0,cz}, {0,0,0}, {0,0,0} };
+			VertexData line4 = { {x, 0, cz + size}, {0,0,0}, {0,0,0} };
 			grid.vertices.push_back(line1);
 			grid.indicies.push_back(i++);
 			grid.vertices.push_back(line2);
+			grid.indicies.push_back(i++);
+			grid.vertices.push_back(line3);
+			grid.indicies.push_back(i++);
+			grid.vertices.push_back(line4);
 			grid.indicies.push_back(i++);
 			z += spacing;
-		}
-
-		z = -size / 2.0f;
-		for (int p = 0; p < lines; ++p)
-		{
-			VertexData line1 = { {x,0,z}, {0,0,0}, {0,0,0} };
-			VertexData line2 = { {x, 0, z + size}, {0,0,0}, {0,0,0} };
-			grid.vertices.push_back(line1);
-			grid.indicies.push_back(i++);
-			grid.vertices.push_back(line2);
-			grid.indicies.push_back(i++);
 			x += spacing;
 		}
 		return grid;
@@ -108,147 +188,16 @@ class Renderer
 	Renderable pyramid;
 	Renderable axe;
 	Renderable grid;
+	Renderable testObj;
 	SHADER_VARS Vars;
-	
-	D3D_DRIVER_TYPE         g_driverType = D3D_DRIVER_TYPE_NULL; // a thing we need for lights 
 
 	// world view proj
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer;
 
-	struct ConstantBuffer
-	{
-		XMMATRIX mWorld;
-		XMMATRIX mView;
-		XMMATRIX mProjection;
-		XMFLOAT4 vLightDir[2];
-		XMFLOAT4 vLightColor[2];
-		XMFLOAT4 vOutputColor;
-	};
-
-	
-	
-	
-	std::vector<uint8_t> load_binary_blob(const char* path)
-	{
-		std::vector<uint8_t> blob;
-
-		std::fstream file{ path, std::ios_base::in | std::ios_base::binary };
-
-		if (file.is_open())
-		{
-			file.seekg(0, std::ios_base::end);
-			blob.resize(file.tellg());
-			file.seekg(0, std::ios_base::beg);
-
-			file.read((char*)blob.data(), blob.size());
-
-			file.close();
-		}
-
-		return std::move(blob);
-	}
-
-	//struct ShaderBundle
-	//{
-	//	Microsoft::WRL::ComPtr<ID3D11InputLayout> InputLayout = nullptr;
-	//	Microsoft::WRL::ComPtr<ID3D11VertexShader> VertexShader = nullptr;
-	//	Microsoft::WRL::ComPtr<ID3D11PixelShader> PixelShader = nullptr;
-	//	Microsoft::WRL::ComPtr<ID3D11Buffer> ConstantBufferVS = nullptr;
-	//	Microsoft::WRL::ComPtr<ID3D11Buffer> ConstantBufferPS = nullptr;
-
-	//	HRESULT CreateVertexShaderAndInputLayoutFromFile(
-	//		ID3D11Device* device, const char* filename,
-	//		D3D11_INPUT_ELEMENT_DESC layout[], UINT numElements)
-	//	{
-	//		HRESULT hr = S_OK;
-
-	//		auto vs_blob = load_binary_blob(filename);
-
-	//		// Create the vertex shader
-	//		hr = device->CreateVertexShader(vs_blob.data(), vs_blob.size(), nullptr,
-	//			VertexShader.ReleaseAndGetAddressOf());
-	//		if (FAILED(hr))
-	//		{
-	//			return hr;
-	//		}
-
-	//		// Create the input layout
-	//		hr = device->CreateInputLayout(layout, numElements, vs_blob.data(),
-	//			vs_blob.size(),
-	//			InputLayout.ReleaseAndGetAddressOf());
-	//		return hr;
-	//	}
-
-	//	HRESULT CreatePixelShaderFromFile(ID3D11Device* device, const char* filename)
-	//	{
-	//		HRESULT hr = S_OK;
-
-	//		auto vs_blob = load_binary_blob(filename);
-
-	//		// Create the pixel shader
-	//		hr = device->CreatePixelShader(vs_blob.data(), vs_blob.size(), nullptr,
-	//			PixelShader.ReleaseAndGetAddressOf());
-	//		return hr;
-	//	}
-
-	//	HRESULT CreateConstantBufferVS(ID3D11Device* device, UINT size)
-	//	{
-	//		return CreateConstantBuffer(device, size, ConstantBufferVS);
-	//	}
-
-	//	HRESULT CreateConstantBufferPS(ID3D11Device* device, UINT size)
-	//	{
-	//		return CreateConstantBuffer(device, size, ConstantBufferPS);
-	//	}
-
-	//	HRESULT CreateConstantBuffer(ID3D11Device* device, UINT size,
-	//		Microsoft::WRL::ComPtr<ID3D11Buffer>& ConstantBuffer)
-	//	{
-	//		HRESULT hr = S_OK;
-	//		// Create the constant buffer
-	//		D3D11_BUFFER_DESC bd = {};
-	//		bd.Usage = D3D11_USAGE_DEFAULT;
-	//		bd.ByteWidth = size;
-	//		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	//		bd.CPUAccessFlags = 0;
-	//		hr = device->CreateBuffer(&bd, nullptr, &ConstantBuffer);
-	//		return hr;
-	//	}
-
-	//	void Bind(ID3D11DeviceContext* context)
-	//	{
-	//		if (ConstantBufferVS)
-	//			context->VSSetConstantBuffers(0, 1, ConstantBufferVS.GetAddressOf());
-	//		if (ConstantBufferPS)
-	//			context->PSSetConstantBuffers(0, 1, ConstantBufferPS.GetAddressOf());
-	//		if (InputLayout)
-	//			context->IASetInputLayout(InputLayout.Get());
-	//		if (VertexShader)
-	//			context->VSSetShader(VertexShader.Get(), nullptr, 0);
-	//		if (PixelShader)
-	//			context->PSSetShader(PixelShader.Get(), nullptr, 0);
-	//	}
-	//};
 	// math library handle
 	GW::MATH::GMatrix m;
 
 public:
-
-
-
-
-		//Settting some of the light variables
-		XMFLOAT4 vLightDirs[2] =
-		{
-			XMFLOAT4(-0.577f, 0.577f, -0.577f, 1.0f),
-			XMFLOAT4(0.0f, 0.0f, -1.0f, 1.0f),
-		};
-		XMFLOAT4 vLightColors[2] =
-		{
-			XMFLOAT4(0.75f, 0.75f, 0.75f, 1.0f),
-			XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)
-		};
-
 
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
 	{
@@ -263,14 +212,17 @@ public:
 			test_pyramid_vertexcount, test_pyramid_indexcount);
 		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe1_data, axe1_indicies, axe1_vertexcount, axe1_indexcount);
 		MeshData<VertexData> gMesh = MakeGrid();
+		MeshData<VertexData> tMesh;
+		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
 		
 		//making pyramid index and vertex buffers
-		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
+		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
 		//making axe buffers
-		axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
+		axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), &aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
 		//making grid buffers
-		grid.CreateBuffers(pDevice, (float*)gMesh.vertices.data(), gMesh.indicies, sizeof(VertexData), gMesh.vertices.size());
-	
+		grid.CreateBuffers(pDevice, (float*)gMesh.vertices.data(), &gMesh.indicies, sizeof(VertexData), gMesh.vertices.size());
+		//test mesh buffers
+		testObj.CreateBuffers(pDevice, (float*)tMesh.vertices.data(), &tMesh.indicies, sizeof(VertexData), tMesh.vertices.size());
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -298,6 +250,9 @@ public:
 		grid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
+		testObj.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+
 		//init math stuff
 		m.Create();
 		
@@ -315,6 +270,9 @@ public:
 		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		grid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		testObj.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+
+		//setting topology for grid
 		grid.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 
 		// free temporary handle
@@ -325,18 +283,6 @@ public:
 	{
 		GW::MATH::GMATRIXF temp;
 		m.IdentityF(temp);
-
-
-		//setting lighting stuff and hoping to god it doesn't fuck things up
-		XMStoreFloat4(&vLightDirs[0], { -0.577f, 0.577f, -0.577f, 1.0f });
-		XMStoreFloat4(&vLightDirs[1], { 0.577f, 0.2577f, -0.577f, 1.0f });
-
-		XMStoreFloat4(&vLightColors[0], { 0.75f, 0.75f, 0.75f, 1.0f });
-		XMStoreFloat4(&vLightColors[1], { 0.2f, 0.2f, 0.5f, 1.0f });
-		XMStoreFloat4(&vLightColors[1], { 0.5f, 0.5f, 1.0f, 1.0f });
-
-
-
 
 		// grab the context & render target
 		d3d.GetImmediateContext((void**)&con);
@@ -349,8 +295,9 @@ public:
 		
 		m.TransposeF(pcb.world, pcb.world);
 		m.TransposeF(Vars.view, pcb.view);
-		m.TransposeF(Vars.projection, pcb.projection);
 
+		//drawing grid
+		m.TransposeF(Vars.projection, pcb.projection);
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		grid.Draw(con);
@@ -358,15 +305,24 @@ public:
 		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-		//Preparing to draw pyramid
+
+		//drawing pyramid
 		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
 		pyramid.Draw(con);
 
+		//drawing test object
+		GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
+		m.TranslatelocalF(temp, translate, pcb.world);
+		m.TransposeF(pcb.world, pcb.world);
+		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		testObj.Bind(con);
+		testObj.Draw(con);
+
+		//drawing axe
 		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
 		m.ScalingF(Vars.world, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-
 		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
 		axe.Draw(con);
@@ -379,14 +335,14 @@ public:
 	//Use to update things such as camera movement, world matrix, etc
 	void Update()
 	{
-		static float t = 0.0f;
+		/*static float t = 0.0f;
 		static ULONGLONG timeStart = 0;
 		ULONGLONG timeCur = GetTickCount64();
 		if (timeStart == 0)
 			timeStart = timeCur;
 		t = (timeCur - timeStart) / 1000.0f;
 		
-		m.RotationYF(Vars.world, t, Vars.world);
+		m.RotationYF(Vars.world, t, Vars.world);*/
 
 
 

@@ -23,9 +23,6 @@ IDXGISwapChain* pSwapChain = nullptr;
 ID3D11DeviceContext* pDeviceContext = nullptr;
 ID3D11RenderTargetView* pTargetView = nullptr;
 
-
-
-
 void CleanUp();
 
 // lets pop a window and use D3D11 to clear to a green screen
