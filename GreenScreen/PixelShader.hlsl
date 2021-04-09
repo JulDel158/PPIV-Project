@@ -34,15 +34,19 @@ struct PS_INPUT
 float4 main(PS_INPUT input) : SV_TARGET 
 {	
     
-    float4 finalColor = (input.uvw.r, input.uvw.g, input.uvw.b, 1.0f);
+    float4 surfaceColor = (input.nrm.r, input.nrm.g, input.nrm.b, 1); //creating a surface color for the end
+    
+    for (int i = 0; i < 2; i++)
+    {
+        float4 lightratio = clamp(dot(-vLightDir, input.nrm));
+        float4 finalColor = (lightratio * vLightColor[i]*surfaceColor);
+    }
     
     ////do NdotL lighting for 2 lights
     //for (int i = 0; i < 2; i++)
     //{
     //    finalColor += saturate(dot((float3) vLightDir[i], input.nrm) * vLightColor[i]);
     //}
-    ////Alpha type 0 use 0.75f;
-    ////Alpha type 1 and 2 use 1.0f;
     //finalColor.a = 1;
     //finalColor *= txDiffuse.Sample(samLinear, input.uvw);
     return finalColor;

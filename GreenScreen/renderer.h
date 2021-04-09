@@ -270,38 +270,7 @@ public:
 		axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
 		//making grid buffers
 		grid.CreateBuffers(pDevice, (float*)gMesh.vertices.data(), gMesh.indicies, sizeof(VertexData), gMesh.vertices.size());
-	//ConstantBuffer cb1;
-	//XMMATRIX       g_World;
-	//XMMATRIX       g_View;
-	//XMMATRIX       g_Projection;
-	//ShaderBundle meshShaderBundle;
-
-
-	//g_World.r[3] = { 0.0f, 1.0f, 3.0f, 2.0f };
-	//cb1.mWorld = XMMatrixTranspose(g_World);
-	//cb1.mView = XMMatrixTranspose(g_View);
-	//cb1.mProjection = XMMatrixTranspose(g_Projection);
-	//cb1.vLightDir[0] = vLightDirs[0];
-	//cb1.vLightDir[1] = vLightDirs[1];
-	//cb1.vLightColor[0] = vLightColors[0];
-	//cb1.vLightColor[1] = vLightColors[1];
-	//cb1.vOutputColor = XMFLOAT4(0, 0, 0, 0);
-	//con->UpdateSubresource(meshShaderBundle.ConstantBufferVS.Get(), 0, nullptr, &cb1, 0, 0);  //==========================  hey this is the light stuff you wer working on 
-
-
-		//CreateBuffers(pDevice);
-		
-//		// Create Vertex Shader
-//		UINT compilerFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-//#if _DEBUG
-//		compilerFlags |= D3DCOMPILE_DEBUG;
-//#endif
-//
-
-
-
-
-
+	
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -357,37 +326,16 @@ public:
 		GW::MATH::GMATRIXF temp;
 		m.IdentityF(temp);
 
-		// Update our time
-		static float t = 0.0f;
-		if (g_driverType == D3D_DRIVER_TYPE_REFERENCE)
-		{
-			t += (float)XM_PI * 0.0125f;
-		}
-		else
-		{
-			static ULONGLONG timeStart = 0;
-			ULONGLONG timeCur = GetTickCount64();
-			if (timeStart == 0)
-				timeStart = timeCur;
-			t = (timeCur - timeStart) / 1000.0f;
-		}
-
 
 		//setting lighting stuff and hoping to god it doesn't fuck things up
 		XMStoreFloat4(&vLightDirs[0], { -0.577f, 0.577f, -0.577f, 1.0f });
 		XMStoreFloat4(&vLightDirs[1], { 0.577f, 0.2577f, -0.577f, 1.0f });
 
 		XMStoreFloat4(&vLightColors[0], { 0.75f, 0.75f, 0.75f, 1.0f });
-		//	XMStoreFloat4(&vLightColors[1], { 0.2f, 0.2f, 0.5f, 1.0f });
+		XMStoreFloat4(&vLightColors[1], { 0.2f, 0.2f, 0.5f, 1.0f });
 		XMStoreFloat4(&vLightColors[1], { 0.5f, 0.5f, 1.0f, 1.0f });
 
 
-		// Rotate the second light around the origin
-		XMMATRIX mRotate = XMMatrixRotationY(-1.0f * t);
-		XMVECTOR vLightDir = XMLoadFloat4(&vLightDirs[1]);
-		// rotares the second light
-		//vLightDir = XMVector3Transform(vLightDir, mRotate);
-		XMStoreFloat4(&vLightDirs[1], vLightDir);
 
 
 		// grab the context & render target
@@ -439,6 +387,15 @@ public:
 		t = (timeCur - timeStart) / 1000.0f;
 		
 		m.RotationYF(Vars.world, t, Vars.world);
+
+
+
+		// Rotate the second light around the origin
+		XMMATRIX mRotate = XMMatrixRotationY(-1.0f * t); //now should be able to rotate lights at the same kind of time for the axe
+		XMVECTOR vLightDir = XMLoadFloat4(&vLightDirs[1]);
+		// rotates the second light
+		vLightDir = XMVector3Transform(vLightDir, mRotate);
+		XMStoreFloat4(&vLightDirs[1], vLightDir);
 	}
 
 	~Renderer()
