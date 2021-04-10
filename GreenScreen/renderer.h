@@ -23,7 +23,14 @@ class Renderer
 		GW::MATH::GMATRIXF world = GW::MATH::GIdentityMatrixF;
 		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
 		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
-		float time = 0;
+		float time = 0.0f;
+		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
+		float pLightRad = 7.5f;
+		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
+		XMFLOAT3 eye;
+		XMFLOAT4 lightColor[2] = { {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
+		//Ka (ambient), Ks(specular), Kd(diffuse), a(shininess)
+		XMFLOAT4 material = { 1.0f, 1.0f, 1.0f, 0.5f };
 	};
 	
 	struct VertexData
@@ -146,6 +153,7 @@ class Renderer
 		return result;
 	}
 
+
 	MeshData<VertexData> MakeGrid(float size = 0, float spacing = 0)
 	{
 		MeshData<VertexData> grid;
@@ -196,6 +204,8 @@ class Renderer
 
 	// math library handle
 	GW::MATH::GMatrix m;
+	// resource view for default texture
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
 
 public:
 
@@ -214,13 +224,32 @@ public:
 		MeshData<VertexData> gMesh = MakeGrid();
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
-		
+
+
 		//Setting texture + sampler
 		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
 		pyramid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
 		grid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
 		testObj.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
 
+		const uint32_t pixel = 0xFFFFFFFF;
+		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
+		D3D11_TEXTURE2D_DESC pd = {};
+		pd.SampleDesc.Count = pd.MipLevels = pd.ArraySize = pd.Width = pd.Height = 1;
+		pd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		pd.Usage = D3D11_USAGE_IMMUTABLE;
+		pd.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+
+		Microsoft::WRL::ComPtr<ID3D11Texture2D> tex;
+		pDevice->CreateTexture2D(&pd, &initData, tex.GetAddressOf());
+
+		D3D11_SHADER_RESOURCE_VIEW_DESC srvd = {};
+		srvd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+		srvd.Texture2D.MipLevels = 1;
+
+		pDevice->CreateShaderResourceView(tex.Get(),
+			&srvd, texSRV.GetAddressOf());
 
 		//making pyramid index and vertex buffers
 		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
@@ -264,10 +293,13 @@ public:
 		m.Create();
 		//Vars.time = 0.0f;
 		// Initializing view matrix
-		m.LookAtLHF(GW::MATH::GVECTORF{ 10.0f, 10.0f, 10.0f }, //eye
-					GW::MATH::GVECTORF{ 0,0.0f,0 }, //at
+		m.LookAtLHF(GW::MATH::GVECTORF{ 0.0f, 10.0f, -1.1f }, //eye
+					GW::MATH::GVECTORF{ 0.0f, 0.0f, 0.0f }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
+
+		Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
+
 		float ar;
 		d3d.GetAspectRatio(ar);
 		//Initializing projection matrix
@@ -305,34 +337,37 @@ public:
 		m.TransposeF(pcb.world, pcb.world);
 
 		//drawing grid
-		/*con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
-		grid.Draw(con);*/
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		grid.Draw(con);
 
 		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 
 		////drawing pyramid
-		/*con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
-		pyramid.Draw(con);*/
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		pyramid.Draw(con);
 
 		//drawing test object
-		GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
+		/*GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-		/*con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		testObj.Bind(con);
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		testObj.Draw(con);*/
 
 		//drawing axe
 		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
 		m.ScalingF(Vars.world, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		/*con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
-		axe.Draw(con);
+		axe.Draw(con);*/
 
 		// release temp handles
 		view->Release();
@@ -350,6 +385,16 @@ public:
 		//Vars.time = (timeCur - timeStart) / 10000.0f;
 		Vars.time += 0.00001f;
 		m.RotationYF(Vars.world, Vars.time, Vars.world);
+		/*GW::MATH::GVECTORF temp;
+		temp.x = Vars.dLightdir.x;
+		temp.y = Vars.dLightdir.y;
+		temp.z = Vars.dLightdir.z;
+		temp.w = 1.0f;
+		
+		m.VectorXMatrixF(Vars.world, temp, temp);
+		Vars.dLightdir.x = temp.x;
+		Vars.dLightdir.y = temp.y;
+		Vars.dLightdir.z = temp.z;*/
 
 
 	}
