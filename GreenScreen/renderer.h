@@ -3,7 +3,7 @@
 #include "VertexShader.h"
 #include "PixelShader.h"
 #include "Renderable.h"
-#include "axe1.h"
+#include "axe2.h"
 #include "test_pyramid.h"
 #include "Wave_VS.h"
 #pragma comment(lib, "d3dcompiler.lib")
@@ -27,10 +27,10 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
-		XMFLOAT3 eye;
 		XMFLOAT4 lightColor[2] = { {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
 		//Ka (ambient), Ks(specular), Kd(diffuse), a(shininess)
 		XMFLOAT4 material = { 1.0f, 1.0f, 1.0f, 0.5f };
+		XMFLOAT3 eye;
 	};
 	
 	struct VertexData
@@ -53,6 +53,7 @@ class Renderer
 		std::vector< unsigned int > vertexIndices, uvIndices, normalIndices;
 		std::vector<XMFLOAT3> temp_vertices, temp_uvs, temp_normals;
 		std::vector <XMFLOAT3> out_vertices, out_uvs, out_normals;
+		MeshData<VertexData> tempContainer;
 
 		FILE* file = fopen(path, "r");
 		if (file == NULL) {
@@ -65,7 +66,6 @@ class Renderer
 			int res = fscanf(file, "%s", lineHeader);
 			if (res == EOF)
 				break; // EOF = End Of File. Quit the loop.
-
 			// else : parse lineHeader
 			if (strcmp(lineHeader, "v") == 0) 
 			{
@@ -78,6 +78,7 @@ class Renderer
 				XMFLOAT3 uv = { 0,0,0 };
 				fscanf(file, "%f %f\n", &uv.x, &uv.y);
 				uv.z = 0.0f;
+				uv.y = 1 - uv.y;
 				temp_uvs.push_back(uv);
 			}
 			else if (strcmp(lineHeader, "vn") == 0)
@@ -86,8 +87,9 @@ class Renderer
 				fscanf(file, "%f %f %f\n", &nrm.x, &nrm.y, &nrm.z);
 				temp_normals.push_back(nrm);
 			}
-			else if (strcmp(lineHeader, "f") == 0) {
-				std::string vertex1, vertex2, vertex3;
+			else if (strcmp(lineHeader, "f") == 0) 
+			{
+				//std::string vertex1, vertex2, vertex3;
 				unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
 				int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n",  
 					&vertexIndex[0], &uvIndex[0], &normalIndex[0], 											    
@@ -112,21 +114,52 @@ class Renderer
 		{
 			VertexData entry;
 			//pos
-			unsigned int vertexIndex = vertexIndices[i] - 1;
-			XMFLOAT3 vertex = temp_vertices[vertexIndex];
-			entry.pos = vertex;
+			unsigned int vIndex = (vertexIndices[i] - 1);
+			entry.pos = temp_vertices[vIndex];
 			// uvs
-			unsigned int uvIndex = uvIndices[i] - 1;
-			XMFLOAT3 uvw = temp_uvs[uvIndex];
-			entry.uvw = uvw;
+			unsigned int uIndex = (uvIndices[i] - 1);
+			entry.uvw = temp_uvs[uIndex];
 			//nrm
-			unsigned int nrmIndex = normalIndices[i] - 1;
-			XMFLOAT3 nrm = temp_uvs[nrmIndex];
-			entry.nrm = nrm;
+			unsigned int nIndex = (normalIndices[i] - 1);
+			entry.nrm = temp_normals[nIndex];
 
-			container.vertices.push_back(entry);
-			container.indicies.push_back(i);
+			tempContainer.vertices.push_back(entry);
+			tempContainer.indicies.push_back(i);
 		}
+
+		container.vertices.clear();
+		container.indicies.clear();
+		for (int i = 0, x = 0; i < tempContainer.vertices.size(); ++i)
+		{
+			bool unique = true;
+			for (int j = 0; j < container.vertices.size(); ++j)
+			{
+				//if the vertex is not unique, add index and break out for next vertex
+				if ((tempContainer.vertices[i].pos.x) == (container.vertices[j].pos.x) &&
+					(tempContainer.vertices[i].pos.y) == (container.vertices[j].pos.y) &&
+					(tempContainer.vertices[i].pos.z) == (container.vertices[j].pos.z) &&
+					(tempContainer.vertices[i].uvw.x) == (container.vertices[j].uvw.x) &&
+					(tempContainer.vertices[i].uvw.y) == (container.vertices[j].uvw.y) &&
+					(tempContainer.vertices[i].nrm.x) == (container.vertices[j].nrm.x) &&
+					(tempContainer.vertices[i].nrm.y) == (container.vertices[j].nrm.y) &&
+					(tempContainer.vertices[i].nrm.z) == (container.vertices[j].nrm.z))
+				{
+					unique = false;
+					container.indicies.push_back(tempContainer.indicies[j]);
+					break;
+				}
+			}
+
+			if (unique)
+			{
+				//container.indicies.push_back(container.vertices.size());
+				container.vertices.push_back(tempContainer.vertices[i]);
+				container.indicies.push_back(x++);
+			}
+		}
+		//container = tempContainer;
+
+
 		return true;
 	}
 
@@ -220,11 +253,11 @@ public:
 		//loading obj data into mesh
 		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
 			test_pyramid_vertexcount, test_pyramid_indexcount);
-		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe1_data, axe1_indicies, axe1_vertexcount, axe1_indexcount);
+		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe2_data, axe2_indicies, axe2_vertexcount, axe2_indexcount);
 		MeshData<VertexData> gMesh = MakeGrid();
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
-
+		
 
 		//Setting texture + sampler
 		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
@@ -337,10 +370,10 @@ public:
 		m.TransposeF(pcb.world, pcb.world);
 
 		//drawing grid
-		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		/*con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		grid.Draw(con);
+		grid.Draw(con);*/
 
 		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
@@ -353,21 +386,21 @@ public:
 		//pyramid.Draw(con);
 		con->DrawIndexedInstanced(pyramid.iCount,2,0,0,0);
 		//drawing test object
-		/*GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
+		GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		testObj.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		testObj.Draw(con);*/
+		testObj.Draw(con);
 
 		//drawing axe
 		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
 		m.ScalingF(Vars.world, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-		/*con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
-		axe.Draw(con);*/
+		axe.Draw(con);
 
 		// release temp handles
 		view->Release();
