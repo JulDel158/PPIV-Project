@@ -207,6 +207,52 @@ class Renderer
 	// resource view for default texture
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
 
+	// global varaibles for camera movment
+	GW::MATH::GVECTORF eyePosition{ 20.0f, 10.0f, -1.1f };
+	GW::MATH::GVECTORF targetPosition{ 0.0f, 0.0f, 0.0f };
+	GW::MATH::GVECTORF camUp{ 0,1,0 };
+
+	GW::MATH::GVECTORF defaultForward = { 0.0f, 0.0f, 1.0f, 0.0f };
+	GW::MATH::GVECTORF defaultRight = { 1.0f, 0.0f, 0.0f, 0.0f };
+	GW::MATH::GVECTORF camForward = { 0.0f, 0.0f, 1.0f, 0.0f };
+	GW::MATH::GVECTORF camRight = { 1.0f, 0.0f, 0.0f, 0.0f };
+
+	GW::MATH::GMatrix camRotationMatrix;
+	GW::MATH::GMatrix groundWorld;
+
+	float moveLeftRight = 0.0f;
+	float moveBackForward = 0.0f;
+
+	float camYaw = 0.0f;
+	float camPitch = 0.0f;
+
+	void UpdateCamera()
+	{
+		//rotating camera
+		m.RotationYawPitchRollF(camYaw, camPitch, 0, camRotationMatrix);
+		m.VectorXMatrixF(camRotationMatrix, defaultForward, targetPosition);
+		/*camTarget = XMVector3Normalize(camTarget);*/
+
+		GW::MATH::GMatrix tempYRotate;
+		m.RotationYF(camYaw, tempYRotate, tempYRotate);
+		
+		//updating camera
+	     m.VectorXMatrixF(tempYRotate, defaultRight, camRight);
+		 m.VectorXMatrixF(tempYRotate, camUp, camUp);
+		 m.VectorXMatrixF(tempYRotate, defaultForward, camForward);
+
+		eyePosition += camRight * moveLeftRight;
+		eyePosition += moveBackForward * camForward;
+
+		moveLeftRight = 0.0f;
+		moveBackForward = 0.0f;
+
+		targetPosition = eyePosition + targetPosition;
+		//setting view matrix
+		m.LookAtLHF(eyePosition, targetPosition, camUp, Vars.view);
+		
+	}
+
 public:
 
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
@@ -395,7 +441,6 @@ public:
 		Vars.dLightdir.x = temp.x;
 		Vars.dLightdir.y = temp.y;
 		Vars.dLightdir.z = temp.z;*/
-
 
 	}
 
