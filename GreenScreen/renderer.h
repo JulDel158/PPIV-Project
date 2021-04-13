@@ -293,7 +293,7 @@ public:
 		m.Create();
 		//Vars.time = 0.0f;
 		// Initializing view matrix
-		m.LookAtLHF(GW::MATH::GVECTORF{ 0.0f, 10.0f, -1.1f }, //eye
+		m.LookAtLHF(GW::MATH::GVECTORF{ 20.0f, 10.0f, -1.1f }, //eye
 					GW::MATH::GVECTORF{ 0.0f, 0.0f, 0.0f }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
@@ -350,8 +350,8 @@ public:
 		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		pyramid.Draw(con);
-
+		//pyramid.Draw(con);
+		con->DrawIndexedInstanced(pyramid.iCount,2,0,0,0);
 		//drawing test object
 		/*GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
