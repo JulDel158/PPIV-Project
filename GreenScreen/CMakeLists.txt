@@ -32,6 +32,7 @@ add_executable (GreenScreen
 	DDSTextureLoader.cpp
 	DDSTextureLoader.h
 	axe1.h
+	axe2.h
 	Wave_VS.h
 	${VERTEX_SHADERS}
 	${PIXEL_SHADERS}
