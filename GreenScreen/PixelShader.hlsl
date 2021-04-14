@@ -13,9 +13,9 @@ cbuffer SHADER_VARS : register(b0)
     float3 dLightdir;
     float pLightRad;
     float3 pLightpos;
-    float3 eye;
     float4 lightColor[2];
     float4 material;
+    float3 eye;
     
 }
 
