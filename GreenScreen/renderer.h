@@ -223,7 +223,7 @@ public:
 		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe1_data, axe1_indicies, axe1_vertexcount, axe1_indexcount);
 		MeshData<VertexData> gMesh = MakeGrid();
 		MeshData<VertexData> tMesh;
-		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
+		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/test02.obj", tMesh);
 
 
 		//Setting texture + sampler
@@ -293,7 +293,7 @@ public:
 		m.Create();
 		//Vars.time = 0.0f;
 		// Initializing view matrix
-		m.LookAtLHF(GW::MATH::GVECTORF{ 20.0f, 10.0f, -1.1f }, //eye
+		m.LookAtLHF(GW::MATH::GVECTORF{ 5.0f, 10.0f, -1.1f }, //eye
 					GW::MATH::GVECTORF{ 0.0f, 0.0f, 0.0f }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
@@ -349,25 +349,25 @@ public:
 		////drawing pyramid
 		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
-		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		//con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		//pyramid.Draw(con);
 		con->DrawIndexedInstanced(pyramid.iCount,2,0,0,0);
 		//drawing test object
-		/*GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
+		GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		testObj.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		testObj.Draw(con);*/
+		testObj.Draw(con);
 
 		//drawing axe
 		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
 		m.ScalingF(Vars.world, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-		/*con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
-		axe.Draw(con);*/
+		axe.Draw(con);
 
 		// release temp handles
 		view->Release();
