@@ -1,5 +1,7 @@
 #include <vector>
 #include <DirectXMath.h>
+#include <d3d11_1.h>
+#include <directxcolors.h>
 #include "VertexShader.h"
 #include "PixelShader.h"
 #include "Renderable.h"
@@ -7,9 +9,6 @@
 #include "test_pyramid.h"
 #include "Wave_VS.h"
 #pragma comment(lib, "d3dcompiler.lib")
-#include <d3d11_1.h>
-#include <directxmath.h>
-#include <directxcolors.h>
 
 using namespace DirectX;
 
@@ -186,6 +185,47 @@ class Renderer
 		return result;
 	}
 
+	//plane grid to be drawn with triangles instead of lines
+	MeshData<VertexData> MakePlaneGrid(int width, int depth, float spacing = 1)
+	{
+		MeshData<VertexData> grid;
+		int size = width * depth;
+		//for testing purposes
+		//spacing = 1.0f;
+		float xLines = static_cast<float>(width) / spacing;
+		float zLines = static_cast<float>(depth) / spacing;
+
+		float x = -width / 2.0f;
+		float z = -depth / 2.0f;
+
+		for (int i = 0; i < zLines; ++i)
+		{
+			x = -width / 2.0f;
+			for (int j = 0; j < xLines; ++j)
+			{
+				VertexData v1 = { {x, 0, z}, {0,0,0,}, {0,1,0,} };
+				grid.vertices.push_back(v1);
+				x += spacing;
+			}
+			z += spacing;
+		}
+
+		for (int i = 0; i < (zLines - 1); ++i)
+		{
+			for (int j = 0; j < (xLines - 1); ++j)
+			{
+				grid.indicies.push_back(j + (i * width));
+				grid.indicies.push_back(j + ((i+1) * width));
+				grid.indicies.push_back((j+1) + ((i + 1) * width));
+
+				grid.indicies.push_back(j + (i * width));
+				grid.indicies.push_back((j + 1) + ((i + 1) * width));
+				grid.indicies.push_back((j + 1) + (i * width));
+			}
+		}
+
+		return grid;
+	}
 
 	MeshData<VertexData> MakeGrid(float size = 0, float spacing = 0)
 	{
@@ -202,19 +242,20 @@ class Renderer
 		const float cz = x;
 		const float cx = x;
 		int i = 0;
+
 		for (int p = 0; p < lines; ++p)
 		{
-			VertexData line1 = { {cx,0,z}, {0,0,0}, {0,0,0} };
-			VertexData line2 = { {cx + size, 0, z}, {0,0,0}, {0,0,0} };
-			VertexData line3 = { {x,0,cz}, {0,0,0}, {0,0,0} };
-			VertexData line4 = { {x, 0, cz + size}, {0,0,0}, {0,0,0} };
-			grid.vertices.push_back(line1);
+			VertexData v1 = { {cx,0,z}, {0,0,0}, {0,0,0} };
+			VertexData v2 = { {cx + size, 0, z}, {0,0,0}, {0,0,0} };
+			VertexData v3 = { {x,0,cz}, {0,0,0}, {0,0,0} };
+			VertexData v4 = { {x, 0, cz + size}, {0,0,0}, {0,0,0} };
+			grid.vertices.push_back(v1);
 			grid.indicies.push_back(i++);
-			grid.vertices.push_back(line2);
+			grid.vertices.push_back(v2);
 			grid.indicies.push_back(i++);
-			grid.vertices.push_back(line3);
+			grid.vertices.push_back(v3);
 			grid.indicies.push_back(i++);
-			grid.vertices.push_back(line4);
+			grid.vertices.push_back(v4);
 			grid.indicies.push_back(i++);
 			z += spacing;
 			x += spacing;
@@ -258,7 +299,6 @@ public:
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
 		
-
 		//Setting texture + sampler
 		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
 		pyramid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
@@ -332,7 +372,7 @@ public:
 					Vars.view);
 
 		Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
-
+		
 		float ar;
 		d3d.GetAspectRatio(ar);
 		//Initializing projection matrix
@@ -370,10 +410,10 @@ public:
 		m.TransposeF(pcb.world, pcb.world);
 
 		//drawing grid
-		/*con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		grid.Draw(con);*/
+		grid.Draw(con);
 
 		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
@@ -385,7 +425,8 @@ public:
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		//pyramid.Draw(con);
 		con->DrawIndexedInstanced(pyramid.iCount,2,0,0,0);
-		//drawing test object
+		
+		////drawing test object
 		GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
