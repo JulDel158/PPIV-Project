@@ -12,7 +12,13 @@ cbuffer SHADER_VARS : register(b0)
     float4 lightColor[2];
     float4 material;
     float3 eye;
+    float wavelenght;
+    float2 wdir;
+    float steepness;
+
 }
+
+static const float PI = 3.14159265f;
 
 struct VS_INPUT
 {
@@ -34,11 +40,26 @@ PS_INPUT main( VS_INPUT input )
     
    
     PS_INPUT output = (PS_INPUT) 0;
-    output.nrm = mul(input.nrm, (float3x3) world);
     output.uvw = input.uvw;
 	// do w * v * p
     float4 temp = mul(input.pos, world);
-    temp.y = 50.0f * sin(input.pos.x * time) * cos(-input.pos.z * time);
+    float k = (2.0f * PI) / wavelenght;
+    float a = steepness / k;
+    float c = sqrt(9.8f / k);
+    float2 d = normalize(wdir);
+    
+    float f = k * (dot(d, temp.xz) - c * time);
+    
+    temp.x += d.x * (a * cos(f));
+    temp.y = a * sin(f);
+    temp.z += d.y * (a * cos(f));
+    
+    float3 tan = normalize(float3(1 - d.x * d.x * (steepness * sin(f)), d.x * (steepness * cos(f)), -d.x * d.y * (steepness * sin(f))));
+    float3 binormal = float3(-d.x * d.y * (steepness * sin(f)), d.y * (steepness * cos(f)), 1 - d.y * d.y * (steepness * sin(f)));
+    
+    output.nrm = normalize(cross(binormal, tan));
+    
+    output.nrm = mul(output.nrm, (float3x3) world);
     output.pos = mul(temp, view);
     output.pos = mul(output.pos, projection);
     

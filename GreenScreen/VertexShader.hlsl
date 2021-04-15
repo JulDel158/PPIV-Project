@@ -15,6 +15,10 @@ cbuffer SHADER_VARS : register(b0)
     float4 lightColor[2];
     float4 material;
     float3 eye;
+    float wavelenght;
+    float2 wdir;
+    float steepness;
+
 }
 
 struct VS_INPUT
