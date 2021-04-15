@@ -325,13 +325,13 @@ public:
 		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
 
 		MeshData<VertexData> tMesh;
-		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/test02.obj", tMesh);
+		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
 		
 		//Setting texture + sampler
 		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		pyramid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		grid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		testObj.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		pyramid.CreateTextureandSampler(pDevice, "");
+		grid.CreateTextureandSampler(pDevice, "");
+		testObj.CreateTextureandSampler(pDevice, "");
 
 		const uint32_t pixel = 0xFFFFFFFF;
 		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
@@ -443,7 +443,6 @@ public:
 		GW::MATH::GMATRIXF temp;
 		m.IdentityF(temp);
 		
-		
 		// grab the context & render target
 		d3d.GetImmediateContext((void**)&con);
 		d3d.GetRenderTargetView((void**)&view);
@@ -474,7 +473,6 @@ public:
 
 		m.ScalingF(iVars.world[1], scale, iVars.world[1]);
 		m.TransposeF(iVars.world[1], iVars.world[1]);
-
 		
 		//drawing grid
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
@@ -489,12 +487,12 @@ public:
 		//drawing pyramid
 		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &iVars, 0, 0);
 		pyramid.Bind(con);
-		//con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		//pyramid.Draw(con);
 		con->DrawIndexedInstanced(pyramid.iCount,2,0,0, 0);
 
-
-		GW::MATH::GVECTORF translate = { 10.0f, -5.0f, 0.0f };
+		//drawing test object
+		GW::MATH::GVECTORF translate = { 10.0f, 5.0f, 0.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
