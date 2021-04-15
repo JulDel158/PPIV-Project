@@ -16,7 +16,10 @@ cbuffer SHADER_VARS : register(b0)
     float4 lightColor[2];
     float4 material;
     float3 eye;
-    
+    float wavelenght;
+    float2 wdir;
+    float steepness;
+
 }
 
 struct VS_INPUT
@@ -39,7 +42,7 @@ float4 main(PS_INPUT input) : SV_TARGET
 {	
     //white color
     float4 finalColor=(float4)0;
-    float ambientterm = 0.25f;
+    float ambientterm = 0.45f;
     //directional light
     float dlratio = saturate(dot(-dLightdir, input.nrm) + ambientterm);
     float4 dirLight = dlratio * lightColor[0];

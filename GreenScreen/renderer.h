@@ -26,10 +26,13 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
-		XMFLOAT4 lightColor[2] = { {1.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
+		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
 		//Ka (ambient), Ks(specular), Kd(diffuse), a(shininess)
 		XMFLOAT4 material = { 1.0f, 1.0f, 1.0f, 0.5f };
 		XMFLOAT3 eye;
+		float wavelenght = 10.0f;
+		XMFLOAT2 wdir = { 1.0f, -1.0f };
+		float steepness = 0.5f;
 	};
 	
 	struct VertexData
@@ -276,6 +279,9 @@ class Renderer
 	Renderable testObj;
 	SHADER_VARS Vars;
 
+	float prevFrame = clock();
+	float dt = 0;
+
 	// math library handle
 	GW::MATH::GMatrix m;
 	// resource view for default texture
@@ -295,7 +301,8 @@ public:
 		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
 			test_pyramid_vertexcount, test_pyramid_indexcount);
 		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe2_data, axe2_indicies, axe2_vertexcount, axe2_indexcount);
-		MeshData<VertexData> gMesh = MakeGrid();
+		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
+
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
 		
@@ -361,12 +368,12 @@ public:
 
 		grid.CreateShadersandInputLayout(pDevice, Wave_VS, ARRAYSIZE(Wave_VS),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
-
+		// Wave_VS, ARRAYSIZE(Wave_VS),
 		//init math stuff
 		m.Create();
 		//Vars.time = 0.0f;
 		// Initializing view matrix
-		m.LookAtLHF(GW::MATH::GVECTORF{ 20.0f, 10.0f, -1.1f }, //eye
+		m.LookAtLHF(GW::MATH::GVECTORF{ 1.0f, 10.0f, -10.1f }, //eye
 					GW::MATH::GVECTORF{ 0.0f, 0.0f, 0.0f }, //at
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
@@ -385,7 +392,7 @@ public:
 		testObj.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 
 		//setting topology for grid
-		grid.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+		//grid.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
 
 		// free temporary handle
 		pDevice->Release();
@@ -395,7 +402,8 @@ public:
 	{
 		GW::MATH::GMATRIXF temp;
 		m.IdentityF(temp);
-
+		
+		
 		// grab the context & render target
 		d3d.GetImmediateContext((void**)&con);
 		d3d.GetRenderTargetView((void**)&view);
@@ -419,15 +427,15 @@ public:
 		m.ScalingF(temp, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 
-		////drawing pyramid
+		//drawing pyramid
 		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		pyramid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		//pyramid.Draw(con);
-		con->DrawIndexedInstanced(pyramid.iCount,2,0,0,0);
+		pyramid.Draw(con);
+		//con->DrawIndexedInstanced(pyramid.iCount,2,0,0,0);
 		
-		////drawing test object
-		GW::MATH::GVECTORF translate = { 0.0f, -5.0f, 10.0f };
+		//drawing test object
+		GW::MATH::GVECTORF translate = { 10.0f, -5.0f, 0.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
@@ -456,9 +464,12 @@ public:
 		ULONGLONG timeCur = GetTickCount64();
 		if (timeStart == 0)
 			timeStart = timeCur;
-		//Vars.time = (timeCur - timeStart) / 10000.0f;
-		Vars.time += 0.00001f;
-		m.RotationYF(Vars.world, Vars.time, Vars.world);
+		Vars.time = (timeCur - timeStart) / 10000.0f;
+		//Vars.time += 0.001f;
+		/*float dt = (clock() - prevFrame) / 10000.0f;
+		prevFrame = clock();
+		Vars.time = (1.0f / dt);*/
+		m.RotationYF(Vars.world, 0.01f, Vars.world);
 		/*GW::MATH::GVECTORF temp;
 		temp.x = Vars.dLightdir.x;
 		temp.y = Vars.dLightdir.y;
