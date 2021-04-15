@@ -1,8 +1,8 @@
 // by default HLSL is COLUMN major
 //constant buffer
-cbuffer SHADER_VARS_INSTANCE : register(b1)
+cbuffer SHADER_VARS_INSTANCE : register(b0)
 {
-    uint ID : SV_InstanceID;
+    //uint ID : SV_InstanceID;
     matrix world[10];
     matrix view;
     matrix projection;
@@ -31,13 +31,13 @@ struct PS_INPUT
 };
 
 // Simple vertex shader
-PS_INPUT main(VS_INPUT input)
+PS_INPUT main(VS_INPUT input, uint worldIndex: SV_InstanceID)
 {
     PS_INPUT output = (PS_INPUT) 0;
-    output.nrm = normalize(mul(input.nrm, (float3x3) world[ID]));
+    output.nrm = normalize(mul(input.nrm, (float3x3) world[worldIndex]));
     output.uvw = input.uvw;
 	// do w * v * p
-    float4 temp = mul(input.pos, world[ID]);
+    float4 temp = mul(input.pos, world[worldIndex]);
     output.pos = mul(temp, view);
     output.pos = mul(output.pos, projection);
     

@@ -18,6 +18,7 @@ set(VERTEX_SHADERS
 )
 set(PIXEL_SHADERS 
 	# add pixel shader (.hlsl) files here
+	InstancePixelShader.hlsl
 	PixelShader.hlsl
 )
 
@@ -29,6 +30,7 @@ add_executable (GreenScreen
 	test_pyramid.h
 	VertexShader.h
 	PixelShader.h
+	InstancePixelShader.h
 	InstanceVertexShader.h
 	Renderable.h
 	DDSTextureLoader.cpp
