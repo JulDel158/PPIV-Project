@@ -17,6 +17,7 @@ using namespace GW;
 using namespace CORE;
 using namespace SYSTEM;
 using namespace GRAPHICS;
+using namespace DirectX;
 
 IDXGISwapChain* pSwapChain = nullptr;
 ID3D11DeviceContext* pDeviceContext = nullptr;

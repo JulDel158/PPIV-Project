@@ -1,0 +1,4 @@
+REFERENCES
+https://brooknovak.wordpress.com/2008/11/13/hlsl-per-pixel-point-light-using-phong-blinn-lighting-model/
+https://takinginitiative.wordpress.com/2010/08/30/directx-10-tutorial-8-lighting-theory-and-hlsl/
+https://catlikecoding.com/unity/tutorials/flow/waves/
