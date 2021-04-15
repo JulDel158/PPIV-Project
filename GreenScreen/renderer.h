@@ -434,7 +434,6 @@ public:
 		iVars.world[9] = iVars.world[0];
 
 
-
 		// free temporary handle
 		pDevice->Release();
 	}
@@ -460,28 +459,23 @@ public:
 		m.TransposeF(pcb.world, pcb.world);
 
 
-		//SHADER_VARS_INSTANCE svi;
-		//svi.world[0].row1 = { 1.0f,0.0f,0.0f,0.0f };
-		//svi.world[0].row2 = { 0.0f,1.0f,0.0f,0.0f };
-		//svi.world[0].row3 = { 0.0f,0.0f,1.0f,0.0f };
-		//svi.world[0].row4 = { 0.0f,0.0f,0.0f,1.0f };
-		//svi.ID = 0;
+		
 		iVars.time = Vars.time;
 		m.TransposeF(Vars.projection, iVars.projection);
 		m.TransposeF(Vars.view, iVars.view);
-		//m.TransposeF(iVars.world[0], iVars.world[0]);
+		
 
 		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, iVars.world[0]);
 		m.TransposeF(iVars.world[0], iVars.world[0]);
-
+		//use this area to move other world matricies
 		GW::MATH::GVECTORF translate1 = { -1.0f, 0.0f, 0.0f }; //code that should move the first world matrix in the array to whatever coordinate
 		m.TranslatelocalF(temp, translate1, iVars.world[1]);
 
 		m.ScalingF(iVars.world[1], scale, iVars.world[1]);
 		m.TransposeF(iVars.world[1], iVars.world[1]);
 
-		//m.TransposeF(svi.world[0], svi.world[0]);
+		
 		//drawing grid
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
