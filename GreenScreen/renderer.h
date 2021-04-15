@@ -29,12 +29,10 @@ class Renderer
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
 		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
-		//Ka (ambient), Ks(specular), Kd(diffuse), a(shininess)
-		XMFLOAT4 material = { 1.0f, 1.0f, 1.0f, 0.5f };
+		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
+		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
+		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
 		XMFLOAT3 eye;
-		float wavelenght = 10.0f;
-		XMFLOAT2 wdir = { 1.0f, -1.0f };
-		float steepness = 0.5f;
 	};
 
 	//the other shader for the instancing
@@ -292,6 +290,7 @@ class Renderer
 	// device and target view
 	ID3D11DeviceContext* con;
 	ID3D11RenderTargetView* view;
+	ID3D11DepthStencilView* depth;
 	//Renderable object used to load pyramid obj
 	Renderable pyramid;
 	Renderable axe;
@@ -449,9 +448,10 @@ public:
 		// grab the context & render target
 		d3d.GetImmediateContext((void**)&con);
 		d3d.GetRenderTargetView((void**)&view);
+		d3d.GetDepthStencilView((void**)&depth);
 		// setup the pipeline
 		ID3D11RenderTargetView *const views[] = { view };
-		con->OMSetRenderTargets(ARRAYSIZE(views), views, nullptr);
+		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
 
 		SHADER_VARS pcb;
 		pcb.time = Vars.time;
@@ -518,6 +518,7 @@ public:
 
 		// release temp handles
 		view->Release();
+		depth->Release();
 		con->Release();
 	}
 
