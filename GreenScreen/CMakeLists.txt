@@ -12,6 +12,7 @@ ADD_DEFINITIONS(-D_UNICODE)
 # CMake FXC shader compilation, add any shaders you want compiled here
 set(VERTEX_SHADERS 
 	# add vertex shader (.hlsl) files here
+	InstanceVertexShader.hlsl
 	VertexShader.hlsl
 	Wave_VS.hlsl
 )
@@ -28,6 +29,7 @@ add_executable (GreenScreen
 	test_pyramid.h
 	VertexShader.h
 	PixelShader.h
+	InstanceVertexShader.h
 	Renderable.h
 	DDSTextureLoader.cpp
 	DDSTextureLoader.h
