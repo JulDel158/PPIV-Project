@@ -241,7 +241,7 @@ class Renderer
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
 
 	// global varaibles for camera movment
-	GW::MATH::GVECTORF eyePosition{ 20.0f, 10.0f, -1.1f };
+	/*GW::MATH::GVECTORF eyePosition{ 20.0f, 10.0f, -1.1f };
 	GW::MATH::GVECTORF targetPosition{ 0.0f, 0.0f, 0.0f };
 	GW::MATH::GVECTORF camUp{ 0,1,0 };
 
@@ -257,34 +257,43 @@ class Renderer
 	float moveBackForward = 0.0f;
 
 	float camYaw = 0.0f;
-	float camPitch = 0.0f;
+	float camPitch = 0.0f;*/
 
-	void UpdateCamera()
-	{
-		//rotating camera
-		m.RotationYawPitchRollF(camYaw, camPitch, 0, camRotationMatrix);
-		m.VectorXMatrixF(camRotationMatrix, defaultForward, targetPosition);
-		/*camTarget = XMVector3Normalize(camTarget);*/
+	float X = 20.0f;
+	float Y = 10.0f;
+	float Z = -1.1f;
+	float rX = 0.0f; 
+	float rY = 0.0f;
+	float rZ = 0.0f; 
 
-		GW::MATH::GMatrix tempYRotate;
-		m.RotationYF(camYaw, tempYRotate, tempYRotate);
-		
-		//updating camera
-	     m.VectorXMatrixF(tempYRotate, defaultRight, camRight);
-		 m.VectorXMatrixF(tempYRotate, camUp, camUp);
-		 m.VectorXMatrixF(tempYRotate, defaultForward, camForward);
+	//void UpdateCamera()
+	//{
+	//	//rotating camera
+	//	m.RotationYawPitchRollF(camYaw, camPitch, 0, camRotationMatrix);
+	//	m.VectorXMatrixF(camRotationMatrix, defaultForward, targetPosition);
+	//	/*camTarget = XMVector3Normalize(camTarget);*/
 
-		eyePosition += camRight * moveLeftRight;
-		eyePosition += moveBackForward * camForward;
+	//	GW::MATH::GMatrix tempYRotate;
+	//	m.RotationYF(camYaw, tempYRotate, tempYRotate);
+	//	
+	//	//updating camera
+	//     m.VectorXMatrixF(tempYRotate, defaultRight, camRight);
+	//	 m.VectorXMatrixF(tempYRotate, camUp, camUp);
+	//	 m.VectorXMatrixF(tempYRotate, defaultForward, camForward);
 
-		moveLeftRight = 0.0f;
-		moveBackForward = 0.0f;
+	//	eyePosition += camRight * moveLeftRight;
+	//	eyePosition += moveBackForward * camForward;
 
-		targetPosition = eyePosition + targetPosition;
-		//setting view matrix
-		m.LookAtLHF(eyePosition, targetPosition, camUp, Vars.view);
-		
-	}
+	//	moveLeftRight = 0.0f;
+	//	moveBackForward = 0.0f;
+
+	//	targetPosition = eyePosition + targetPosition;
+	//	//setting view matrix
+	//	m.LookAtLHF(eyePosition, targetPosition, camUp, Vars.view);
+	//	
+	//}
+
+	
 
 public:
 
@@ -474,7 +483,71 @@ public:
 		Vars.dLightdir.x = temp.x;
 		Vars.dLightdir.y = temp.y;
 		Vars.dLightdir.z = temp.z;*/
-
+		const float M = 1.0f; 
+		if (GetAsyncKeyState('X'))
+		{
+			Z += M;
+		}
+		if (GetAsyncKeyState('Z'))
+		{
+			Z -= M;
+		}
+		if (GetAsyncKeyState('D'))
+		{
+			X += M;
+		}
+		if (GetAsyncKeyState('A'))
+		{
+			X -= M;
+		}
+		if (GetAsyncKeyState('W'))
+		{
+			Y += M;
+		}
+		if (GetAsyncKeyState('S'))
+		{
+			Y -= M;
+		}
+		if (GetAsyncKeyState('V'))
+		{
+			rZ += M;
+		}
+		if (GetAsyncKeyState('C'))
+		{
+			rX -= M;
+		}
+		if (GetAsyncKeyState('R'))
+		{
+			rX += M;
+		}
+		if (GetAsyncKeyState('E'))
+		{
+			rX -= M;
+		}
+		if (GetAsyncKeyState('G'))
+		{
+			rY += M;
+		}
+		if (GetAsyncKeyState('F'))
+		{
+			rY -= M;
+		}
+		/*GW::MATH::GMATRIXF vt; 
+		GW::MATH::GMATRIXF rotation = GW::MATH::GIdentityMatrixF;
+		m.RotationXF(rotation, rX, rotation);
+		m.RotationYF(rotation, rY, rotation);
+		m.RotationYF(rotation, rZ, rotation);
+		GW::MATH::GVECTORF pos = { X,Y,Z };
+		m.TranslatelocalF(vt, pos, vt);
+		m.MultiplyMatrixF(vt, rotation, Vars.view);
+		m.InverseF(Vars.view, Vars.view);*/
+		/*Vars.view.row1 = { X,Y,Z };
+		Vars.view.row2 = { rX,rY,rZ };
+		Vars.view.row3 = { 0,1,0 };*/
+		m.LookAtLHF(GW::MATH::GVECTORF{ X, Y, Z }, //eye
+			GW::MATH::GVECTORF{rX, rY, rZ }, //at
+			GW::MATH::GVECTORF{ 0,1,0 }, //up
+			Vars.view);
 	}
 
 	~Renderer()
