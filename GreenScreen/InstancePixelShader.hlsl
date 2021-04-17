@@ -1,12 +1,10 @@
 Texture2D txDiffuse : register(t0);
 SamplerState samLinear : register(s0);
 
-
-
-//Constant Buffer Varibles 
-cbuffer SHADER_VARS : register(b0)
+cbuffer SHADER_VARS_INSTANCE : register(b0)
 {
-    matrix world;
+    //uint ID : SV_InstanceID;
+    matrix world[10];
     matrix view;
     matrix projection;
     float time;
@@ -14,9 +12,7 @@ cbuffer SHADER_VARS : register(b0)
     float pLightRad;
     float3 pLightpos;
     float4 lightColor[2];
-    float4 wave;
-    float4 wave2;
-    float4 wave3;
+    float4 material;
     float3 eye;
 }
 
@@ -36,10 +32,10 @@ struct PS_INPUT
 };
 
 // Apllying lights and texture mapping
-float4 main(PS_INPUT input) : SV_TARGET 
-{	
+float4 main(PS_INPUT input) : SV_TARGET
+{
     //white color
-    float4 finalColor=(float4)0;
+    float4 finalColor = (float4) 0;
     float ambientterm = 0.45f;
     //directional light
     float dlratio = saturate(dot(-dLightdir, input.nrm) + ambientterm);
@@ -54,10 +50,6 @@ float4 main(PS_INPUT input) : SV_TARGET
     float3 pldir = normalize((pLightpos - input.worldpos) * att);
     float plratio = saturate(dot(pldir, input.nrm));
     float4 pointlight = plratio * lightColor[1];
-    
-    
-    
-    
     
     //float3 lightdir = normalize(input.worldpos - pLightpos);
     //float diffLight = saturate(dot(input.nrm, -lightdir));

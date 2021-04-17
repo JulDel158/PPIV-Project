@@ -4,6 +4,8 @@
 #include <directxcolors.h>
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "InstancePixelShader.h"
+#include "InstanceVertexShader.h"
 #include "Renderable.h"
 #include "axe2.h"
 #include "test_pyramid.h"
@@ -27,12 +29,28 @@ class Renderer
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
 		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
+		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
+		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
+		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
+		XMFLOAT3 eye;
+	};
+
+	//the other shader for the instancing
+	_declspec(align(16))
+	struct SHADER_VARS_INSTANCE
+	{
+		GW::MATH::GMATRIXF world[10];
+		//UINT ID;
+		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
+		float time = 0.0f;
+		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f };
+		float pLightRad = 7.5f;
+		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f };
+		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
 		//Ka (ambient), Ks(specular), Kd(diffuse), a(shininess)
 		XMFLOAT4 material = { 1.0f, 1.0f, 1.0f, 0.5f };
 		XMFLOAT3 eye;
-		float wavelenght = 10.0f;
-		XMFLOAT2 wdir = { 1.0f, -1.0f };
-		float steepness = 0.5f;
 	};
 	
 	struct VertexData
@@ -272,12 +290,15 @@ class Renderer
 	// device and target view
 	ID3D11DeviceContext* con;
 	ID3D11RenderTargetView* view;
+	ID3D11DepthStencilView* depth;
 	//Renderable object used to load pyramid obj
 	Renderable pyramid;
 	Renderable axe;
 	Renderable grid;
 	Renderable testObj;
 	SHADER_VARS Vars;
+	SHADER_VARS_INSTANCE iVars;
+	
 
 	float prevFrame = clock();
 	float dt = 0;
@@ -363,9 +384,9 @@ public:
 		
 		//Setting texture + sampler
 		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		pyramid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		grid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		testObj.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		pyramid.CreateTextureandSampler(pDevice, "");
+		grid.CreateTextureandSampler(pDevice, "");
+		testObj.CreateTextureandSampler(pDevice, "");
 
 		const uint32_t pixel = 0xFFFFFFFF;
 		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
@@ -412,8 +433,8 @@ public:
 		};
 		
 		//creating v/p shaders and input layout
-		pyramid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
-			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+		pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
+			InstancePixelShader, ARRAYSIZE(InstancePixelShader), format, ARRAYSIZE(format));
 
 		axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
@@ -441,13 +462,32 @@ public:
 		m.ProjectionDirectXLHF(G_PI_F / 2.0f, ar, 0.01f, 100, Vars.projection);
 
 		// create constant buffer
-		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_INSTANCE));
 		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		grid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		testObj.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 
 		//setting topology for grid
 		//grid.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+
+		//initializing the values of multiple instances for the other world matricies should now create a nomrmal pyramid at (2,2,2)
+		//iVars.ID = 0;
+		iVars.world[0].row1 = { 1.0f,0.0f,0.0f,0.0f };
+		iVars.world[0].row2 = { 0.0f,1.0f,0.0f,0.0f };
+		iVars.world[0].row3 = { 0.0f,0.0f,1.0f,0.0f };
+		iVars.world[0].row4 = { 0.0f,0.0f,0.0f,1.0f };
+
+		//setting up the others in a way that isn't absolute cancer like above
+		iVars.world[1] = iVars.world[0];
+		iVars.world[2] = iVars.world[0];
+		iVars.world[3] = iVars.world[0];
+		iVars.world[4] = iVars.world[0];
+		iVars.world[5] = iVars.world[0];
+		iVars.world[6] = iVars.world[0];
+		iVars.world[7] = iVars.world[0];
+		iVars.world[8] = iVars.world[0];
+		iVars.world[9] = iVars.world[0];
+
 
 		// free temporary handle
 		pDevice->Release();
@@ -458,13 +498,13 @@ public:
 		GW::MATH::GMATRIXF temp;
 		m.IdentityF(temp);
 		
-		
 		// grab the context & render target
 		d3d.GetImmediateContext((void**)&con);
 		d3d.GetRenderTargetView((void**)&view);
+		d3d.GetDepthStencilView((void**)&depth);
 		// setup the pipeline
 		ID3D11RenderTargetView *const views[] = { view };
-		con->OMSetRenderTargets(ARRAYSIZE(views), views, nullptr);
+		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
 
 		SHADER_VARS pcb;
 		pcb.time = Vars.time;
@@ -472,25 +512,42 @@ public:
 		m.TransposeF(Vars.view, pcb.view);
 		m.TransposeF(pcb.world, pcb.world);
 
+
+		
+		iVars.time = Vars.time;
+		m.TransposeF(Vars.projection, iVars.projection);
+		m.TransposeF(Vars.view, iVars.view);
+		
+
+		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
+		m.ScalingF(temp, scale, iVars.world[0]);
+		m.TransposeF(iVars.world[0], iVars.world[0]);
+		//use this area to move other world matricies
+		GW::MATH::GVECTORF translate1 = { -1.0f, 0.0f, 0.0f }; //code that should move the first world matrix in the array to whatever coordinate
+		m.TranslatelocalF(temp, translate1, iVars.world[1]);
+
+		m.ScalingF(iVars.world[1], scale, iVars.world[1]);
+		m.TransposeF(iVars.world[1], iVars.world[1]);
+		
 		//drawing grid
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		grid.Draw(con);
 
-		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
+		//GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 
 		//drawing pyramid
-		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &iVars, 0, 0);
 		pyramid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		pyramid.Draw(con);
-		//con->DrawIndexedInstanced(pyramid.iCount,2,0,0,0);
-		
+		//pyramid.Draw(con);
+		con->DrawIndexedInstanced(pyramid.iCount,2,0,0, 0);
+
 		//drawing test object
-		GW::MATH::GVECTORF translate = { 10.0f, -5.0f, 0.0f };
+		GW::MATH::GVECTORF translate = { 10.0f, 5.0f, 0.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
@@ -508,6 +565,7 @@ public:
 
 		// release temp handles
 		view->Release();
+		depth->Release();
 		con->Release();
 	}
 
