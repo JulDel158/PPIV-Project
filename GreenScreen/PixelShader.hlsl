@@ -17,7 +17,9 @@ cbuffer SHADER_VARS : register(b0)
     float4 wave;
     float4 wave2;
     float4 wave3;
-    float3 eye;
+    float specularPow;
+    float3 camwpos;
+    float specIntent;
 }
 
 struct VS_INPUT
@@ -55,7 +57,11 @@ float4 main(PS_INPUT input) : SV_TARGET
     float plratio = saturate(dot(pldir, input.nrm));
     float4 pointlight = plratio * lightColor[1];
     
-    
+    float3 viewdir = normalize(camwpos - input.worldpos);
+    float3 halfvec = normalize((-dLightdir) + viewdir);
+    float a1 = pow(clamp(dot(input.nrm, halfvec),0.0f ,1.0f), specularPow);
+    float intensity = max(a1, 0);
+    float4 reflectedlight = lightColor[0] * specIntent * intensity;
     
     
     
@@ -90,7 +96,7 @@ float4 main(PS_INPUT input) : SV_TARGET
     //a.color = CombineColor(dlight, pLight);
     
     //combine lights and texture
-    finalColor += dirLight + pointlight;
+    finalColor += dirLight + pointlight + reflectedlight;
     finalColor *= txDiffuse.Sample(samLinear, (float2) input.uvw);
     return finalColor;
 }

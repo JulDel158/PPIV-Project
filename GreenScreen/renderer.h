@@ -32,7 +32,9 @@ class Renderer
 		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
 		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
-		XMFLOAT3 eye;
+		float specularPow = 0.4f;
+		XMFLOAT3 camwpos;
+		float specIntent = 0.7f;
 	};
 
 	//the other shader for the instancing
@@ -399,7 +401,7 @@ public:
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
 
-		Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
+		//Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
 		
 		float ar;
 		d3d.GetAspectRatio(ar);
@@ -452,6 +454,10 @@ public:
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
 
 		SHADER_VARS pcb;
+		pcb.pLightRad = 5.0f;
+		iVars.pLightRad = pcb.pLightRad;
+		iVars.dLightdir = pcb.dLightdir;
+		pcb.pLightpos = Vars.pLightpos;
 		pcb.time = Vars.time;
 		m.TransposeF(Vars.projection, pcb.projection);
 		m.TransposeF(Vars.view, pcb.view);
@@ -527,7 +533,12 @@ public:
 		/*float dt = (clock() - prevFrame) / 10000.0f;
 		prevFrame = clock();
 		Vars.time = (1.0f / dt);*/
-		m.RotationYF(Vars.world, 0.01f, Vars.world);
+		m.RotationYF(Vars.world, 0.001f, Vars.world);
+		GW::MATH::GVECTORF tvec = { 0.0f,  2.0f, 0.0f };
+		tvec.x += 4.0f;
+		m.VectorXMatrixF(Vars.world, tvec, tvec);
+		Vars.pLightpos = { tvec.x, tvec.y, tvec.z };
+		iVars.pLightpos = Vars.pLightpos;
 		/*GW::MATH::GVECTORF temp;
 		temp.x = Vars.dLightdir.x;
 		temp.y = Vars.dLightdir.y;

@@ -14,7 +14,9 @@ cbuffer SHADER_VARS : register(b0)
     float4 wave1;
     float4 wave2;
     float4 wave3;
-    float3 eye;
+    float specularPow;
+    float3 camwpos;
+    float specIntent;
 }
 
 static const float PI = 3.14159265f;
