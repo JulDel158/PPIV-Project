@@ -297,6 +297,7 @@ class Renderer
 	Renderable grid;
 	Renderable testObj;
 	SHADER_VARS Vars;
+	SHADER_VARS Camera;
 	SHADER_VARS_INSTANCE iVars;
 	
 
@@ -305,9 +306,66 @@ class Renderer
 
 	// math library handle
 	GW::MATH::GMatrix m;
+	// Input Library
+	GW::INPUT::GInput input;
 	// resource view for default texture
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyBoxSRV;
+
+	// global varaibles for camera movment
+	/*GW::MATH::GVECTORF eyePosition{ 20.0f, 10.0f, -1.1f };
+	GW::MATH::GVECTORF targetPosition{ 0.0f, 0.0f, 0.0f };
+	GW::MATH::GVECTORF camUp{ 0,1,0 };
+
+	GW::MATH::GVECTORF defaultForward = { 0.0f, 0.0f, 1.0f, 0.0f };
+	GW::MATH::GVECTORF defaultRight = { 1.0f, 0.0f, 0.0f, 0.0f };
+	GW::MATH::GVECTORF camForward = { 0.0f, 0.0f, 1.0f, 0.0f };
+	GW::MATH::GVECTORF camRight = { 1.0f, 0.0f, 0.0f, 0.0f };
+
+	GW::MATH::GMatrix camRotationMatrix;
+	GW::MATH::GMatrix groundWorld;
+
+	float moveLeftRight = 0.0f;
+	float moveBackForward = 0.0f;
+
+	float camYaw = 0.0f;
+	float camPitch = 0.0f;*/
+
+	float X = 20.0f;
+	float Y = 10.0f;
+	float Z = -1.1f;
+	float rX = 0.0f; 
+	float rY = 0.0f;
+	float rZ = 0.0f; 
+
+	//void UpdateCamera()
+	//{
+	//	//rotating camera
+	//	m.RotationYawPitchRollF(camYaw, camPitch, 0, camRotationMatrix);
+	//	m.VectorXMatrixF(camRotationMatrix, defaultForward, targetPosition);
+	//	/*camTarget = XMVector3Normalize(camTarget);*/
+
+	//	GW::MATH::GMatrix tempYRotate;
+	//	m.RotationYF(camYaw, tempYRotate, tempYRotate);
+	//	
+	//	//updating camera
+	//     m.VectorXMatrixF(tempYRotate, defaultRight, camRight);
+	//	 m.VectorXMatrixF(tempYRotate, camUp, camUp);
+	//	 m.VectorXMatrixF(tempYRotate, defaultForward, camForward);
+
+	//	eyePosition += camRight * moveLeftRight;
+	//	eyePosition += moveBackForward * camForward;
+
+	//	moveLeftRight = 0.0f;
+	//	moveBackForward = 0.0f;
+
+	//	targetPosition = eyePosition + targetPosition;
+	//	//setting view matrix
+	//	m.LookAtLHF(eyePosition, targetPosition, camUp, Vars.view);
+	//	
+	//}
+
+	
 
 public:
 
@@ -318,6 +376,9 @@ public:
 		d3d = _d3d;
 		ID3D11Device* pDevice = nullptr;
 		d3d.GetDevice((void**)&pDevice);
+
+		// create input lib
+		input.Create(_win);
 		
 		//loading obj data into mesh
 		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
@@ -503,7 +564,7 @@ public:
 
 		//drawing axe
 		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
-		m.ScalingF(Vars.world, scale, pcb.world);
+		m.ScalingF(Camera.world, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
@@ -528,7 +589,7 @@ public:
 		/*float dt = (clock() - prevFrame) / 10000.0f;
 		prevFrame = clock();
 		Vars.time = (1.0f / dt);*/
-		m.RotationYF(Vars.world, 0.01f, Vars.world);
+		m.RotationYF(Camera.world, 0.01f, Camera.world);
 		/*GW::MATH::GVECTORF temp;
 		temp.x = Vars.dLightdir.x;
 		temp.y = Vars.dLightdir.y;
@@ -539,8 +600,93 @@ public:
 		Vars.dLightdir.x = temp.x;
 		Vars.dLightdir.y = temp.y;
 		Vars.dLightdir.z = temp.z;*/
+		GW::MATH::GMATRIXF rotateX;
+		GW::MATH::GMATRIXF rotateY;
+		float x;
+		float y; 
 
-
+		float keys[4] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D };
+		float wasd[4] = { 0, };
+		for (int i = 0; i < 4; i++)
+		{
+			input.GetState(keys[i], wasd[i]);
+		}
+		input.GetMouseDelta(x, y);
+		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
+		m.RotationYF(GW::MATH::GIdentityMatrixF, - x * 0.001f, rotateY);
+		/*m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );*/
+		m.MultiplyMatrixF(Vars.view, rotateY,Vars.view );
+		m.MultiplyMatrixF(Vars.view, rotateX,Vars.view);
+		GW::MATH::GMATRIXF move; 
+		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
+			GW::MATH::GVECTORF{ wasd[1] - wasd[3], 0, wasd[0] - wasd[2] }, move);
+		m.MultiplyMatrixF(Vars.view, move, Vars.view);
+		
+		//const float M = 1.0f; 
+		//if (GetAsyncKeyState('X'))
+		//{
+		//	Z += M;
+		//}
+		//if (GetAsyncKeyState('Z'))
+		//{
+		//	Z -= M;
+		//}
+		//if (GetAsyncKeyState('D'))a
+		//{
+		//	X += M;
+		//}
+		//if (GetAsyncKeyState('A'))
+		//{
+		//	X -= M;
+		//}
+		//if (GetAsyncKeyState('W'))
+		//{
+		//	Y += M;
+		//}
+		//if (GetAsyncKeyState('S'))
+		//{
+		//	Y -= M;
+		//}
+		//if (GetAsyncKeyState('V'))
+		//{
+		//	rZ += M;
+		//}
+		//if (GetAsyncKeyState('C'))
+		//{
+		//	rX -= M;
+		//}
+		//if (GetAsyncKeyState('R'))
+		//{
+		//	rX += M;
+		//}
+		//if (GetAsyncKeyState('E'))
+		//{
+		//	rX -= M;
+		//}
+		//if (GetAsyncKeyState('G'))
+		//{
+		//	rY += M;
+		//}
+		//if (GetAsyncKeyState('F'))
+		//{
+		//	rY -= M;
+		//}
+		///*GW::MATH::GMATRIXF vt; 
+		//GW::MATH::GMATRIXF rotation = GW::MATH::GIdentityMatrixF;
+		//m.RotationXF(rotation, rX, rotation);
+		//m.RotationYF(rotation, rY, rotation);
+		//m.RotationYF(rotation, rZ, rotation);
+		//GW::MATH::GVECTORF pos = { X,Y,Z };
+		//m.TranslatelocalF(vt, pos, vt);
+		//m.MultiplyMatrixF(vt, rotation, Vars.view);
+		//m.InverseF(Vars.view, Vars.view);*/
+		///*Vars.view.row1 = { X,Y,Z };
+		//Vars.view.row2 = { rX,rY,rZ };
+		//Vars.view.row3 = { 0,1,0 };*/
+		//m.LookAtLHF(GW::MATH::GVECTORF{ X, Y, Z }, //eye
+		//	GW::MATH::GVECTORF{rX, rY, rZ }, //at
+		//	GW::MATH::GVECTORF{ 0,1,0 }, //up
+		//	Vars.view);
 	}
 
 	~Renderer()
