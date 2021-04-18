@@ -307,6 +307,7 @@ class Renderer
 	GW::MATH::GMatrix m;
 	// resource view for default texture
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyBoxSRV;
 
 public:
 
