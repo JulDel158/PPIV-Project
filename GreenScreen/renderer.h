@@ -28,13 +28,16 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
-		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
+		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.6f, 0.6f, 0.2f, 0.3f} };
 		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
 		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
 		float specularPow = 0.4f;
 		XMFLOAT3 camwpos;
 		float specIntent = 0.7f;
+		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
+		
+
 	};
 
 	//the other shader for the instancing
@@ -49,10 +52,14 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f };
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f };
-		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
-		//Ka (ambient), Ks(specular), Kd(diffuse), a(shininess)
-		XMFLOAT4 material = { 1.0f, 1.0f, 1.0f, 0.5f };
-		XMFLOAT3 eye;
+		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.6f, 0.6f, 0.2f, 0.3f} };
+		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
+		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
+		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
+		float specularPow = 0.4f;
+		XMFLOAT3 camwpos;
+		float specIntent = 0.7f;
+		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
 	};
 	
 	struct VertexData
