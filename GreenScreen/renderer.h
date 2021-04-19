@@ -396,7 +396,7 @@ public:
 		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
 
 		MeshData<VertexData> tMesh;
-		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/test02.obj", tMesh);
+		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
 		
 		//Setting texture + sampler
 		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
