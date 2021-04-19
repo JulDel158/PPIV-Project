@@ -5,18 +5,23 @@
 //constant buffer
 cbuffer SHADER_VARS : register(b0)
 {
-	matrix world;
-	matrix view;
-	matrix projection;
+    matrix world;
+    matrix view;
+    matrix projection;
     float time;
     float3 dLightdir;
     float pLightRad;
     float3 pLightpos;
-    float4 lightColor[2];
+    float4 lightColor[3];
     float4 wave;
     float4 wave2;
     float4 wave3;
-    float3 eye;
+    float specularPow;
+    float3 camwpos;
+    float specIntent;
+    float3 spotPos;
+    
+
 }
 
 struct VS_INPUT

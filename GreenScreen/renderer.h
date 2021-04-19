@@ -28,11 +28,16 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
-		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
+		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.6f, 0.6f, 0.2f, 0.3f} };
 		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
 		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
-		XMFLOAT3 eye;
+		float specularPow = 0.4f;
+		XMFLOAT3 camwpos;
+		float specIntent = 0.7f;
+		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
+		
+
 	};
 
 	//the other shader for the instancing
@@ -47,10 +52,14 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f };
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f };
-		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
-		//Ka (ambient), Ks(specular), Kd(diffuse), a(shininess)
-		XMFLOAT4 material = { 1.0f, 1.0f, 1.0f, 0.5f };
-		XMFLOAT3 eye;
+		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.6f, 0.6f, 0.2f, 0.3f} };
+		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
+		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
+		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
+		float specularPow = 0.4f;
+		XMFLOAT3 camwpos;
+		float specIntent = 0.7f;
+		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
 	};
 	
 	struct VertexData
@@ -461,7 +470,7 @@ public:
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
 
-		Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
+		//Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
 		
 		float ar;
 		d3d.GetAspectRatio(ar);
@@ -514,6 +523,10 @@ public:
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
 
 		SHADER_VARS pcb;
+		pcb.pLightRad = 5.0f;
+		iVars.pLightRad = pcb.pLightRad;
+		iVars.dLightdir = pcb.dLightdir;
+		pcb.pLightpos = Vars.pLightpos;
 		pcb.time = Vars.time;
 		m.TransposeF(Vars.projection, pcb.projection);
 		m.TransposeF(Vars.view, pcb.view);
@@ -590,6 +603,12 @@ public:
 		prevFrame = clock();
 		Vars.time = (1.0f / dt);*/
 		m.RotationYF(Camera.world, 0.01f, Camera.world);
+		m.RotationYF(Vars.world, 0.001f, Vars.world);
+		GW::MATH::GVECTORF tvec = { 0.0f,  2.0f, 0.0f };
+		tvec.x += 4.0f;
+		m.VectorXMatrixF(Vars.world, tvec, tvec);
+		Vars.pLightpos = { tvec.x, tvec.y, tvec.z };
+		iVars.pLightpos = Vars.pLightpos;
 		/*GW::MATH::GVECTORF temp;
 		temp.x = Vars.dLightdir.x;
 		temp.y = Vars.dLightdir.y;
