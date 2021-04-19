@@ -310,7 +310,7 @@ class Renderer
 	GW::INPUT::GInput input;
 	// resource view for default texture
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
-	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyBoxSRV;
+	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyBoxSRV;
 
 	// global varaibles for camera movment
 	/*GW::MATH::GVECTORF eyePosition{ 20.0f, 10.0f, -1.1f };
@@ -387,7 +387,7 @@ public:
 		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
 
 		MeshData<VertexData> tMesh;
-		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
+		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/test02.obj", tMesh);
 		
 		//Setting texture + sampler
 		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
