@@ -28,16 +28,15 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
-		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.6f, 0.6f, 0.2f, 0.3f} };
+		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.2f, 0.3f, 0.0f, 0.3f} };
 		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
 		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
-		float specularPow = 0.4f;
+		float specularPow = 10.0f;
 		XMFLOAT3 camwpos;
 		float specIntent = 0.7f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
 		
-
 	};
 
 	//the other shader for the instancing
@@ -56,7 +55,7 @@ class Renderer
 		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
 		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
-		float specularPow = 0.4f;
+		float specularPow = 10.0f;
 		XMFLOAT3 camwpos;
 		float specIntent = 0.7f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
@@ -308,7 +307,6 @@ class Renderer
 	SHADER_VARS Vars;
 	SHADER_VARS Camera;
 	SHADER_VARS_INSTANCE iVars;
-	
 
 	float prevFrame = clock();
 	float dt = 0;
@@ -320,60 +318,12 @@ class Renderer
 	// resource view for default texture
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
 
-	// global varaibles for camera movment
-	/*GW::MATH::GVECTORF eyePosition{ 20.0f, 10.0f, -1.1f };
-	GW::MATH::GVECTORF targetPosition{ 0.0f, 0.0f, 0.0f };
-	GW::MATH::GVECTORF camUp{ 0,1,0 };
-
-	GW::MATH::GVECTORF defaultForward = { 0.0f, 0.0f, 1.0f, 0.0f };
-	GW::MATH::GVECTORF defaultRight = { 1.0f, 0.0f, 0.0f, 0.0f };
-	GW::MATH::GVECTORF camForward = { 0.0f, 0.0f, 1.0f, 0.0f };
-	GW::MATH::GVECTORF camRight = { 1.0f, 0.0f, 0.0f, 0.0f };
-
-	GW::MATH::GMatrix camRotationMatrix;
-	GW::MATH::GMatrix groundWorld;
-
-	float moveLeftRight = 0.0f;
-	float moveBackForward = 0.0f;
-
-	float camYaw = 0.0f;
-	float camPitch = 0.0f;*/
-
 	float X = 20.0f;
 	float Y = 10.0f;
 	float Z = -1.1f;
 	float rX = 0.0f; 
 	float rY = 0.0f;
 	float rZ = 0.0f; 
-
-	//void UpdateCamera()
-	//{
-	//	//rotating camera
-	//	m.RotationYawPitchRollF(camYaw, camPitch, 0, camRotationMatrix);
-	//	m.VectorXMatrixF(camRotationMatrix, defaultForward, targetPosition);
-	//	/*camTarget = XMVector3Normalize(camTarget);*/
-
-	//	GW::MATH::GMatrix tempYRotate;
-	//	m.RotationYF(camYaw, tempYRotate, tempYRotate);
-	//	
-	//	//updating camera
-	//     m.VectorXMatrixF(tempYRotate, defaultRight, camRight);
-	//	 m.VectorXMatrixF(tempYRotate, camUp, camUp);
-	//	 m.VectorXMatrixF(tempYRotate, defaultForward, camForward);
-
-	//	eyePosition += camRight * moveLeftRight;
-	//	eyePosition += moveBackForward * camForward;
-
-	//	moveLeftRight = 0.0f;
-	//	moveBackForward = 0.0f;
-
-	//	targetPosition = eyePosition + targetPosition;
-	//	//setting view matrix
-	//	m.LookAtLHF(eyePosition, targetPosition, camUp, Vars.view);
-	//	
-	//}
-
-	
 
 public:
 
@@ -607,17 +557,8 @@ public:
 		tvec.x += 4.0f;
 		m.VectorXMatrixF(Vars.world, tvec, tvec);
 		Vars.pLightpos = { tvec.x, tvec.y, tvec.z };
-		iVars.pLightpos = Vars.pLightpos;
-		/*GW::MATH::GVECTORF temp;
-		temp.x = Vars.dLightdir.x;
-		temp.y = Vars.dLightdir.y;
-		temp.z = Vars.dLightdir.z;
-		temp.w = 1.0f;
 		
-		m.VectorXMatrixF(Vars.world, temp, temp);
-		Vars.dLightdir.x = temp.x;
-		Vars.dLightdir.y = temp.y;
-		Vars.dLightdir.z = temp.z;*/
+		
 		GW::MATH::GMATRIXF rotateX;
 		GW::MATH::GMATRIXF rotateY;
 		float x;
@@ -632,79 +573,23 @@ public:
 		input.GetMouseDelta(x, y);
 		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
 		m.RotationYF(GW::MATH::GIdentityMatrixF, - x * 0.001f, rotateY);
+		m.InverseF(Vars.view, Vars.view);
 		/*m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );*/
 		m.MultiplyMatrixF(Vars.view, rotateY,Vars.view );
 		m.MultiplyMatrixF(Vars.view, rotateX,Vars.view);
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
-			GW::MATH::GVECTORF{ wasd[1] - wasd[3], 0, wasd[0] - wasd[2] }, move);
+			GW::MATH::GVECTORF{ wasd[3] - wasd[1], 0, wasd[0] - wasd[2] }, move);
 		m.MultiplyMatrixF(Vars.view, move, Vars.view);
+		Vars.camwpos = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
+		m.InverseF(Vars.view, Vars.view);
 		
-		//const float M = 1.0f; 
-		//if (GetAsyncKeyState('X'))
-		//{
-		//	Z += M;
-		//}
-		//if (GetAsyncKeyState('Z'))
-		//{
-		//	Z -= M;
-		//}
-		//if (GetAsyncKeyState('D'))a
-		//{
-		//	X += M;
-		//}
-		//if (GetAsyncKeyState('A'))
-		//{
-		//	X -= M;
-		//}
-		//if (GetAsyncKeyState('W'))
-		//{
-		//	Y += M;
-		//}
-		//if (GetAsyncKeyState('S'))
-		//{
-		//	Y -= M;
-		//}
-		//if (GetAsyncKeyState('V'))
-		//{
-		//	rZ += M;
-		//}
-		//if (GetAsyncKeyState('C'))
-		//{
-		//	rX -= M;
-		//}
-		//if (GetAsyncKeyState('R'))
-		//{
-		//	rX += M;
-		//}
-		//if (GetAsyncKeyState('E'))
-		//{
-		//	rX -= M;
-		//}
-		//if (GetAsyncKeyState('G'))
-		//{
-		//	rY += M;
-		//}
-		//if (GetAsyncKeyState('F'))
-		//{
-		//	rY -= M;
-		//}
-		///*GW::MATH::GMATRIXF vt; 
-		//GW::MATH::GMATRIXF rotation = GW::MATH::GIdentityMatrixF;
-		//m.RotationXF(rotation, rX, rotation);
-		//m.RotationYF(rotation, rY, rotation);
-		//m.RotationYF(rotation, rZ, rotation);
-		//GW::MATH::GVECTORF pos = { X,Y,Z };
-		//m.TranslatelocalF(vt, pos, vt);
-		//m.MultiplyMatrixF(vt, rotation, Vars.view);
-		//m.InverseF(Vars.view, Vars.view);*/
-		///*Vars.view.row1 = { X,Y,Z };
-		//Vars.view.row2 = { rX,rY,rZ };
-		//Vars.view.row3 = { 0,1,0 };*/
-		//m.LookAtLHF(GW::MATH::GVECTORF{ X, Y, Z }, //eye
-		//	GW::MATH::GVECTORF{rX, rY, rZ }, //at
-		//	GW::MATH::GVECTORF{ 0,1,0 }, //up
-		//	Vars.view);
+		iVars.pLightpos = Vars.pLightpos;
+		iVars.lightColor[2] = Vars.lightColor[2];
+		iVars.camwpos = Vars.camwpos;
+		iVars.spotPos = Vars.spotPos;
+		iVars.specularPow = Vars.specularPow;
+		iVars.view = Vars.view;
 	}
 
 	~Renderer()

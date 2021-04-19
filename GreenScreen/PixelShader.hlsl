@@ -60,6 +60,7 @@ float4 ConeLight(float3 lightPos, float3 pos, float3 coneDirection, float coneRa
     float3 lightdir = normalize(lightPos - pos);
     float surfaceRatio = saturate(dot(-lightdir, coneDirection));
     float attenuation = 1.0f - normalize((innerCRatio - surfaceRatio) / (innerCRatio - outerCRatio));
+    attenuation *= attenuation;
     float spotFactor = (surfaceRatio > coneRatio) ? 1 : 0;
     float lightratio = normalize(dot(lightdir, normal));
     
@@ -83,7 +84,7 @@ float4 main(PS_INPUT input) : SV_TARGET
     //RESULT = LIGHTRATIO * LIGHTCOLOR * SURFACECOLOR
     float4 pointlight = PointLight(pLightpos, input.worldpos, pLightRad, input.nrm, lightColor[1]);
     float3 cdir = { 1.0f, -0.01f, 0.0f };
-    float4 spotLight = ConeLight(spotPos, input.worldpos, cdir, 0.2f, 0.7f, 0.1f, input.nrm, lightColor[2]);
+    float4 spotLight = ConeLight(spotPos, input.worldpos, cdir, 0.2f, 0.9f, 0.01f, input.nrm, lightColor[2]);
     
     float3 viewdir = normalize(camwpos - input.worldpos);
     float3 halfvec = normalize((-dLightdir) + viewdir);
@@ -91,39 +92,7 @@ float4 main(PS_INPUT input) : SV_TARGET
     float intensity = max(a1, 0);
     float4 reflectedlight = lightColor[0] * specIntent * intensity;
     
-    
-    
-    //float3 lightdir = normalize(input.worldpos - pLightpos);
-    //float diffLight = saturate(dot(input.nrm, -lightdir));
-    //float LDistanceS = 25.0f;
-    //diffLight *= (LDistanceS / dot(pLightpos - input.worldpos, pLightpos - input.worldpos));
-    //float3 a = normalize(normalize((float1x3) view - input.worldpos) - lightdir);
-    
-    //float specLighting = pow(saturate(dot(a, input.nrm)), 1.0f);
-    ////float4 texel = tex2D(samLinear, input.uvw);
-    //finalColor +=
-    //float4(saturate(
-    //((float3) lightColor[1] * diffLight * 0.6f) +
-    //(specLighting * 0.5f)
-    //), 1);
-    
-    //float attenuation = 1.0f - saturate(length(plpos - input.pos) / 500.0f);
-    //float4 pl = normalize((plpos - input.pos) * attenuation);
-    //finalColor += saturate((dot((float3) pl, input.nrm) + 0.45f) * plcolor);
-    
-    //point light
-    //float att = 1.0f - Clamp(VecMagnitude({
-    //    PLpos.x - a.pos.x, PLpos.y - a.pos.y, PLpos.z - a.pos.z 
-    //}) / lRadius);
-    
-    //VECTOR_3D PL = NormalizeVec({
-    //    (PLpos.x - a.pos.x) * att, (PLpos.y - a.pos.y) * att, (PLpos.z - a.pos.z) * att
-    //});
-    //float pLightRatio = Clamp(DotProduct(PL, a.nrm));
-    //unsigned int pLight = LerpColor(0xFF000000, PLcolor, pLightRatio);
-    //a.color = CombineColor(dlight, pLight);
-    
-    //combine lights and texture
+    //combine lights and texture //+ reflectedlight
     finalColor += dirLight + pointlight + spotLight + reflectedlight;
     finalColor *= txDiffuse.Sample(samLinear, (float2) input.uvw);
     return finalColor;
