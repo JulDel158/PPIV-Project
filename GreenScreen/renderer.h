@@ -374,8 +374,20 @@ class Renderer
 	//	
 	//}
 
+	GW::MATH::GMATRIXF LocalXRotationF(GW::MATH::GMATRIXF inMatrix, float radian)
+	{
+		GW::MATH::GMATRIXF outMatrix; 
+		float c = cos(radian);
+		float s = sin(radian); 
+		GW::MATH::GMATRIXF Rotation = GW::MATH::GIdentityMatrixF;
+		Rotation.data[5] = c; 
+		Rotation.data[6] = s; 
+		Rotation.data[9] = -s;
+		Rotation.data[10] = c; 
+		GW::MATH::GMatrix::MultiplyMatrixF(Rotation, inMatrix, outMatrix);
+		return outMatrix;
+	};
 	
-
 public:
 
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
@@ -621,91 +633,28 @@ public:
 		Vars.dLightdir.z = temp.z;*/
 		GW::MATH::GMATRIXF rotateX;
 		GW::MATH::GMATRIXF rotateY;
-		float x;
-		float y; 
+		float x = 0.001f;
+		float y = 0.001f;
 
-		float keys[4] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D };
-		float wasd[4] = { 0, };
+		float keys[8] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D, G_KEY_Q, G_KEY_E, G_KEY_Z, G_KEY_X };
+		float wasd[8] = { 0, };
 		for (int i = 0; i < 4; i++)
 		{
 			input.GetState(keys[i], wasd[i]);
 		}
+		m.InverseF(Vars.view, Vars.view);
 		input.GetMouseDelta(x, y);
-		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
-		m.RotationYF(GW::MATH::GIdentityMatrixF, - x * 0.001f, rotateY);
-		/*m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );*/
+		GW::MATH::GVECTORF position = Vars.view.row4; 
+		rotateX = LocalXRotationF(GW::MATH::GIdentityMatrixF,  y * 0.001f);
+		m.RotationYF(GW::MATH::GIdentityMatrixF, - x *  0.001f, rotateY);
 		m.MultiplyMatrixF(Vars.view, rotateY,Vars.view );
 		m.MultiplyMatrixF(Vars.view, rotateX,Vars.view);
+		Vars.view.row4 = position; 
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
 			GW::MATH::GVECTORF{ wasd[1] - wasd[3], 0, wasd[0] - wasd[2] }, move);
 		m.MultiplyMatrixF(Vars.view, move, Vars.view);
-		
-		//const float M = 1.0f; 
-		//if (GetAsyncKeyState('X'))
-		//{
-		//	Z += M;
-		//}
-		//if (GetAsyncKeyState('Z'))
-		//{
-		//	Z -= M;
-		//}
-		//if (GetAsyncKeyState('D'))a
-		//{
-		//	X += M;
-		//}
-		//if (GetAsyncKeyState('A'))
-		//{
-		//	X -= M;
-		//}
-		//if (GetAsyncKeyState('W'))
-		//{
-		//	Y += M;
-		//}
-		//if (GetAsyncKeyState('S'))
-		//{
-		//	Y -= M;
-		//}
-		//if (GetAsyncKeyState('V'))
-		//{
-		//	rZ += M;
-		//}
-		//if (GetAsyncKeyState('C'))
-		//{
-		//	rX -= M;
-		//}
-		//if (GetAsyncKeyState('R'))
-		//{
-		//	rX += M;
-		//}
-		//if (GetAsyncKeyState('E'))
-		//{
-		//	rX -= M;
-		//}
-		//if (GetAsyncKeyState('G'))
-		//{
-		//	rY += M;
-		//}
-		//if (GetAsyncKeyState('F'))
-		//{
-		//	rY -= M;
-		//}
-		///*GW::MATH::GMATRIXF vt; 
-		//GW::MATH::GMATRIXF rotation = GW::MATH::GIdentityMatrixF;
-		//m.RotationXF(rotation, rX, rotation);
-		//m.RotationYF(rotation, rY, rotation);
-		//m.RotationYF(rotation, rZ, rotation);
-		//GW::MATH::GVECTORF pos = { X,Y,Z };
-		//m.TranslatelocalF(vt, pos, vt);
-		//m.MultiplyMatrixF(vt, rotation, Vars.view);
-		//m.InverseF(Vars.view, Vars.view);*/
-		///*Vars.view.row1 = { X,Y,Z };
-		//Vars.view.row2 = { rX,rY,rZ };
-		//Vars.view.row3 = { 0,1,0 };*/
-		//m.LookAtLHF(GW::MATH::GVECTORF{ X, Y, Z }, //eye
-		//	GW::MATH::GVECTORF{rX, rY, rZ }, //at
-		//	GW::MATH::GVECTORF{ 0,1,0 }, //up
-		//	Vars.view);
+		m.InverseF(Vars.view, Vars.view);
 	}
 
 	~Renderer()
