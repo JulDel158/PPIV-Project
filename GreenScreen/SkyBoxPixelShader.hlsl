@@ -7,7 +7,7 @@ cbuffer SHADER_VARS_SKYBOX : register(b0)
     matrix world;
     matrix view;
     matrix projection;
-
+    float4 pos;
 }
 
 
@@ -30,5 +30,6 @@ struct PS_INPUT
 
 float4 main(PS_INPUT input) : SV_TARGET
 {
+    //return float4(1, 1, 1, 1);
     return environment.Sample(enviromentSampler,input.localpos);
 }

@@ -8,6 +8,7 @@ cbuffer SHADER_VARS_SKYBOX : register(b0)
     matrix world;
     matrix view;
     matrix projection;
+    float4 pos;
 
 }
 
@@ -33,12 +34,12 @@ PS_INPUT main(VS_INPUT input)
     output.nrm = normalize(mul(input.nrm, (float3x3) world));
     output.uvw = input.uvw;
 	// do w * v * p
-    float4 temp = mul(input.pos, world);
+   float4 temp = mul(input.pos, world);
     output.pos = mul(temp, view);
     output.pos = mul(output.pos, projection);
     
     output.localpos = input.pos;
-
+    
     return output;
 }
 

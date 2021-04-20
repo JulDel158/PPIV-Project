@@ -48,7 +48,7 @@ class Renderer
 		GW::MATH::GMATRIXF world = GW::MATH::GIdentityMatrixF;
 		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
 		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
-
+		XMFLOAT4 pos = { 0.0f,0.0f,0.0f,1.0f };
 
 	};
 
@@ -422,17 +422,17 @@ public:
 		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
 
 		MeshData<VertexData> tMesh;
-		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/test02.obj", tMesh);
+		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
 		//loading skybox
 		MeshData<VertexData> skyBoxMesh;
-		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/CUBE.obj", skyBoxMesh);
+		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/CUBE.obj", skyBoxMesh);
 		
 		//Setting texture + sampler
-		axe.CreateTextureandSampler(pDevice, "../PPIV-Project-main/GreenScreen/axeTexture.dds");
+		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
 		pyramid.CreateTextureandSampler(pDevice, "");
 		grid.CreateTextureandSampler(pDevice, "");
 		testObj.CreateTextureandSampler(pDevice, "");
-		skyBox.CreateTextureandSampler(pDevice, "../PPIV-Project-main/GreenScreen/TestSkyBoxOcean.dds");
+		skyBox.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/TestSkyBoxOcean.dds");
 
 		const uint32_t pixel = 0xFFFFFFFF;
 		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
@@ -496,6 +496,9 @@ public:
 
 		skyBox.CreateShadersandInputLayout(pDevice, SkyBoxVertexShader, ARRAYSIZE(SkyBoxVertexShader),
 			SkyBoxPixelShader, ARRAYSIZE(SkyBoxPixelShader), format, ARRAYSIZE(format));
+
+
+		
 
 		// Wave_VS, ARRAYSIZE(Wave_VS),
 		//init math stuff
@@ -681,11 +684,18 @@ public:
 			GW::MATH::GVECTORF{ wasd[1] - wasd[3], 0, wasd[0] - wasd[2] }, move);
 		m.MultiplyMatrixF(Vars.view, move, Vars.view);
 		m.InverseF(Vars.view, Vars.view);
+
+
+
+		//GW::MATH::GVECTORF positionSkybox = { Vars.camwpos.x,Vars.camwpos.y,Vars.camwpos.z,1.0f};
+		skyboxSV.world = (GW::MATH::GMATRIXF&)XMMatrixTranslation(position.x, position.y, position.z);
+		//m.TranslatelocalF(skyboxSV.world, position, skyboxSV.world);
+		
 	}
 
 
 	void DrawSkyBox() {
-		
+
 		GW::MATH::GMATRIXF temp;
 		m.IdentityF(temp);
 
@@ -697,18 +707,27 @@ public:
 		ID3D11RenderTargetView* const views[] = { view };
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
 		
-		//draw the skybox around the camera
+		//SHADER_VARS_SKYBOX pcb;
+		//pcb.pos = { Vars.camwpos.x,Vars.camwpos.y,Vars.camwpos.z };
+	
+	
 		m.TransposeF(Vars.projection, skyboxSV.projection);
 		m.TransposeF(Vars.view, skyboxSV.view);
 		m.TransposeF(skyboxSV.world, skyboxSV.world);
+		
+		//draw the skybox around the camera
+		/*m.TransposeF(Vars.projection, skyboxSV.projection);
+		m.TransposeF(Vars.view, skyboxSV.view);
+		m.TransposeF(skyboxSV.world, skyboxSV.world);*/
 
 		//GW::MATH::GVECTORF scale = { 20.0f, 20.f, 20.0f, 1.0f };
 		//m.ScalingF(temp, scale, skyboxSV.world);
 		//m.TransposeF(skyboxSV.world, skyboxSV.world);
 
+		
+
 		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
 		skyBox.Bind(con);
-		con->PSSetShaderResources(0, 1, skyBoxSRV.GetAddressOf());
 		skyBox.Draw(con);
 
 	}
