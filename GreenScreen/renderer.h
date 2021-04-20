@@ -6,8 +6,11 @@
 #include "PixelShader.h"
 #include "InstancePixelShader.h"
 #include "InstanceVertexShader.h"
+#include "SkyBoxPixelShader.h"
+#include "SkyBoxVertexShader.h"
 #include "Renderable.h"
 #include "axe2.h"
+#include "CUBE.h"
 #include "test_pyramid.h"
 #include "Wave_VS.h"
 #pragma comment(lib, "d3dcompiler.lib")
@@ -37,6 +40,15 @@ class Renderer
 		float specIntent = 0.7f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
 		
+
+	};
+
+	_declspec(align(16))
+		struct SHADER_VARS_SKYBOX {
+		GW::MATH::GMATRIXF world = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
+
 
 	};
 
@@ -305,9 +317,11 @@ class Renderer
 	Renderable axe;
 	Renderable grid;
 	Renderable testObj;
+	Renderable skyBox;
 	SHADER_VARS Vars;
 	SHADER_VARS Camera;
 	SHADER_VARS_INSTANCE iVars;
+	SHADER_VARS_SKYBOX skyboxSV;
 	
 
 	float prevFrame = clock();
@@ -319,7 +333,7 @@ class Renderer
 	GW::INPUT::GInput input;
 	// resource view for default texture
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
-	//Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyBoxSRV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyBoxSRV;
 
 	// global varaibles for camera movment
 	/*GW::MATH::GVECTORF eyePosition{ 20.0f, 10.0f, -1.1f };
@@ -408,13 +422,17 @@ public:
 		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
 
 		MeshData<VertexData> tMesh;
-		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
+		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/test02.obj", tMesh);
+		//loading skybox
+		MeshData<VertexData> skyBoxMesh;
+		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/CUBE.obj", skyBoxMesh);
 		
 		//Setting texture + sampler
-		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		axe.CreateTextureandSampler(pDevice, "../PPIV-Project-main/GreenScreen/axeTexture.dds");
 		pyramid.CreateTextureandSampler(pDevice, "");
 		grid.CreateTextureandSampler(pDevice, "");
 		testObj.CreateTextureandSampler(pDevice, "");
+		skyBox.CreateTextureandSampler(pDevice, "../PPIV-Project-main/GreenScreen/TestSkyBoxOcean.dds");
 
 		const uint32_t pixel = 0xFFFFFFFF;
 		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
@@ -431,10 +449,10 @@ public:
 		srvd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srvd.Texture2D.MipLevels = 1;
+		
 
 		pDevice->CreateShaderResourceView(tex.Get(),
 			&srvd, texSRV.GetAddressOf());
-
 		//making pyramid index and vertex buffers
 		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
 		//making axe buffers
@@ -443,6 +461,9 @@ public:
 		grid.CreateBuffers(pDevice, (float*)gMesh.vertices.data(), &gMesh.indicies, sizeof(VertexData), gMesh.vertices.size());
 		//test mesh buffers
 		testObj.CreateBuffers(pDevice, (float*)tMesh.vertices.data(), &tMesh.indicies, sizeof(VertexData), tMesh.vertices.size());
+		//skybox buffers
+		skyBox.CreateBuffers(pDevice, (float*)skyBoxMesh.vertices.data(), &skyBoxMesh.indicies, sizeof(VertexData), skyBoxMesh.vertices.size());
+
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -472,6 +493,10 @@ public:
 
 		grid.CreateShadersandInputLayout(pDevice, Wave_VS, ARRAYSIZE(Wave_VS),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+
+		skyBox.CreateShadersandInputLayout(pDevice, SkyBoxVertexShader, ARRAYSIZE(SkyBoxVertexShader),
+			SkyBoxPixelShader, ARRAYSIZE(SkyBoxPixelShader), format, ARRAYSIZE(format));
+
 		// Wave_VS, ARRAYSIZE(Wave_VS),
 		//init math stuff
 		m.Create();
@@ -494,6 +519,7 @@ public:
 		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		grid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		testObj.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		skyBox.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_SKYBOX));
 
 		//setting topology for grid
 		//grid.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
@@ -615,7 +641,7 @@ public:
 		prevFrame = clock();
 		Vars.time = (1.0f / dt);*/
 		m.RotationYF(Camera.world, 0.01f, Camera.world);
-		m.RotationYF(Vars.world, 0.001f, Vars.world);
+		//m.RotationYF(Vars.world, 0.001f, Vars.world);
 		GW::MATH::GVECTORF tvec = { 0.0f,  2.0f, 0.0f };
 		tvec.x += 4.0f;
 		m.VectorXMatrixF(Vars.world, tvec, tvec);
@@ -655,6 +681,36 @@ public:
 			GW::MATH::GVECTORF{ wasd[1] - wasd[3], 0, wasd[0] - wasd[2] }, move);
 		m.MultiplyMatrixF(Vars.view, move, Vars.view);
 		m.InverseF(Vars.view, Vars.view);
+	}
+
+
+	void DrawSkyBox() {
+		
+		GW::MATH::GMATRIXF temp;
+		m.IdentityF(temp);
+
+		// grab the context & render target
+		d3d.GetImmediateContext((void**)&con);
+		d3d.GetRenderTargetView((void**)&view);
+		d3d.GetDepthStencilView((void**)&depth);
+		// setup the pipeline
+		ID3D11RenderTargetView* const views[] = { view };
+		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
+		
+		//draw the skybox around the camera
+		m.TransposeF(Vars.projection, skyboxSV.projection);
+		m.TransposeF(Vars.view, skyboxSV.view);
+		m.TransposeF(skyboxSV.world, skyboxSV.world);
+
+		//GW::MATH::GVECTORF scale = { 20.0f, 20.f, 20.0f, 1.0f };
+		//m.ScalingF(temp, scale, skyboxSV.world);
+		//m.TransposeF(skyboxSV.world, skyboxSV.world);
+
+		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
+		skyBox.Bind(con);
+		con->PSSetShaderResources(0, 1, skyBoxSRV.GetAddressOf());
+		skyBox.Draw(con);
+
 	}
 
 	~Renderer()

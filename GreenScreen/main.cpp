@@ -53,6 +53,7 @@ int main()
 					+d3d11.GetSwapchain((void**)&pSwapChain))
 				{
 					pDeviceContext->ClearRenderTargetView(pTargetView, clr);
+					renderer.DrawSkyBox();
 					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
 					renderer.Update();
 					renderer.Render();
