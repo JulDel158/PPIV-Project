@@ -39,9 +39,9 @@ class Renderer
 		XMFLOAT3 camwpos;
 		float specIntent = 10.0f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
-		float coneIratio = 0.9f;
+		float coneIratio = 1.0f;
 		XMFLOAT3 coneDir = { 0.0f, -0.01f, 1.0f };
-		float coneOratio = 0.01f;
+		float coneOratio = 0.9f;
 		float cRatio = 0.2f;
 	};
 
@@ -74,9 +74,9 @@ class Renderer
 		XMFLOAT3 camwpos;
 		float specIntent = 10.0f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
-		float coneIratio = 0.9f;
+		float coneIratio = 1.0f;
 		XMFLOAT3 coneDir = { 0.0f, -0.01f, 1.0f };
-		float coneOratio = 0.01f;
+		float coneOratio = 0.9f;
 		float cRatio = 0.2f;
 	};
 	
@@ -601,8 +601,9 @@ public:
 		m.VectorXMatrixF(Camera.world, svec, svec);
 		m.VectorXMatrixF(Camera.world, tvec, tvec);
 		Vars.pLightpos = { tvec.x, tvec.y, tvec.z };
-		Vars.spotPos = { svec.x, svec.y, -svec.z };
-		Vars.coneDir = { -svec.x, -0.1f, -svec.z };
+		Vars.spotPos = { -tvec.x, tvec.y, -tvec.z };
+		//Vars.coneDir = { svec.x, svec.y, svec.z };
+		
 		iVars.coneDir = Vars.coneDir;
 		GW::MATH::GMATRIXF rotateX;
 		GW::MATH::GMATRIXF rotateY;

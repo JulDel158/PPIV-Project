@@ -60,7 +60,7 @@ float4 ConeLight(float3 lightPos, float3 pos, float3 coneDirection, float coneRa
 {
     float3 lightdir = normalize(lightPos - pos);
     float surfaceRatio = saturate(dot(-lightdir, coneDirection));
-    float attenuation = 1.0f - normalize((innerCRatio - surfaceRatio) / (innerCRatio - outerCRatio));
+    float attenuation = 1.0f - saturate((innerCRatio - surfaceRatio) / (innerCRatio - outerCRatio));
     attenuation *= attenuation;
     float spotFactor = (surfaceRatio > coneRatio) ? 1 : 0;
     float lightratio = normalize(dot(lightdir, normal));
