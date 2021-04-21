@@ -44,6 +44,15 @@ class Renderer
 	};
 
 	_declspec(align(16))
+	struct SCENE_INFORMATION
+	{
+		XMFLOAT4X4 View;
+		XMFLOAT4X4 Projection;
+		float SeaweedWidth;
+		float SeaweedHeight;
+	};
+
+	_declspec(align(16))
 		struct SHADER_VARS_SKYBOX {
 		GW::MATH::GMATRIXF world = GW::MATH::GIdentityMatrixF;
 		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
@@ -80,6 +89,11 @@ class Renderer
 		DirectX::XMFLOAT3 uvw;
 		DirectX::XMFLOAT3 nrm;
 	};
+
+
+
+
+	
 
 	template <typename T>
 	struct MeshData
@@ -323,6 +337,9 @@ class Renderer
 	SHADER_VARS_INSTANCE iVars;
 	SHADER_VARS_SKYBOX skyboxSV;
 	
+	//buffers for the seaweed
+	Microsoft::WRL::ComPtr<ID3D11Buffer> seaweedLocations;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> seaweedDirections;
 
 	float prevFrame = clock();
 	float dt = 0;
@@ -353,7 +370,7 @@ class Renderer
 
 	float camYaw = 0.0f;
 	float camPitch = 0.0f;*/
-
+	 
 	float X = 20.0f;
 	float Y = 10.0f;
 	float Z = -1.1f;
@@ -422,17 +439,17 @@ public:
 		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
 
 		MeshData<VertexData> tMesh;
-		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
+		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/test02.obj", tMesh);
 		//loading skybox
 		MeshData<VertexData> skyBoxMesh;
-		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/CUBE.obj", skyBoxMesh);
+		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/CUBE.obj", skyBoxMesh);
 		
 		//Setting texture + sampler
-		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		axe.CreateTextureandSampler(pDevice, "../PPIV-Project-main/GreenScreen/axeTexture.dds");
 		pyramid.CreateTextureandSampler(pDevice, "");
 		grid.CreateTextureandSampler(pDevice, "");
 		testObj.CreateTextureandSampler(pDevice, "");
-		skyBox.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/TestSkyBoxOcean.dds");
+		skyBox.CreateTextureandSampler(pDevice, "../PPIV-Project-main/GreenScreen/TestSkyBoxOcean.dds");
 
 		const uint32_t pixel = 0xFFFFFFFF;
 		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
@@ -673,16 +690,15 @@ public:
 		}
 		m.InverseF(Vars.view, Vars.view);
 		input.GetMouseDelta(x, y);
-		GW::MATH::GVECTORF position = Vars.view.row4; 
 		rotateX = LocalXRotationF(GW::MATH::GIdentityMatrixF,  y * 0.001f);
 		m.RotationYF(GW::MATH::GIdentityMatrixF, - x *  0.001f, rotateY);
 		m.MultiplyMatrixF(Vars.view, rotateY,Vars.view );
 		m.MultiplyMatrixF(Vars.view, rotateX,Vars.view);
-		Vars.view.row4 = position; 
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
 			GW::MATH::GVECTORF{ wasd[1] - wasd[3], 0, wasd[0] - wasd[2] }, move);
-		m.MultiplyMatrixF(Vars.view, move, Vars.view);
+		m.MultiplyMatrixF(Vars.view, move, Vars.view); 
+		GW::MATH::GVECTORF position = Vars.view.row4; 
 		m.InverseF(Vars.view, Vars.view);
 
 
@@ -706,31 +722,28 @@ public:
 		// setup the pipeline
 		ID3D11RenderTargetView* const views[] = { view };
 		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
-		
-		//SHADER_VARS_SKYBOX pcb;
-		//pcb.pos = { Vars.camwpos.x,Vars.camwpos.y,Vars.camwpos.z };
-	
 	
 		m.TransposeF(Vars.projection, skyboxSV.projection);
 		m.TransposeF(Vars.view, skyboxSV.view);
 		m.TransposeF(skyboxSV.world, skyboxSV.world);
-		
-		//draw the skybox around the camera
-		/*m.TransposeF(Vars.projection, skyboxSV.projection);
-		m.TransposeF(Vars.view, skyboxSV.view);
-		m.TransposeF(skyboxSV.world, skyboxSV.world);*/
-
-		//GW::MATH::GVECTORF scale = { 20.0f, 20.f, 20.0f, 1.0f };
-		//m.ScalingF(temp, scale, skyboxSV.world);
-		//m.TransposeF(skyboxSV.world, skyboxSV.world);
-
-		
 
 		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
 		skyBox.Bind(con);
 		skyBox.Draw(con);
+	}
+
+
+	void CreateSeaweed() {
+
+		//geo shader stuff
+		static unsigned int numVert = 0;
+		static unsigned int numIndex = 0;
+
 
 	}
+
+	
+
 
 	~Renderer()
 	{
