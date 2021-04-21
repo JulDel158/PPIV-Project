@@ -18,6 +18,10 @@ cbuffer SHADER_VARS : register(b0)
     float3 camwpos;
     float specIntent;
     float3 spotPos;
+    float coneIratio;
+    float3 coneDir;
+    float coneOratio;
+    float cRatio;
 }
 
 static const float PI = 3.14159265f;

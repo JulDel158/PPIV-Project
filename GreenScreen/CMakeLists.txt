@@ -12,12 +12,14 @@ ADD_DEFINITIONS(-D_UNICODE)
 # CMake FXC shader compilation, add any shaders you want compiled here
 set(VERTEX_SHADERS 
 	# add vertex shader (.hlsl) files here
+	SkyBoxVertexShader.hlsl
 	InstanceVertexShader.hlsl
 	VertexShader.hlsl
 	Wave_VS.hlsl
 )
 set(PIXEL_SHADERS 
 	# add pixel shader (.hlsl) files here
+	SkyBoxPixelShader.hlsl
 	InstancePixelShader.hlsl
 	PixelShader.hlsl
 )
@@ -32,11 +34,14 @@ add_executable (GreenScreen
 	PixelShader.h
 	InstancePixelShader.h
 	InstanceVertexShader.h
+	SkyBoxPixelShader.h
+	SkyBoxVertexShader.h
 	Renderable.h
 	DDSTextureLoader.cpp
 	DDSTextureLoader.h
 	axe1.h
 	axe2.h
+	CUBE.h
 	Wave_VS.h
 	${VERTEX_SHADERS}
 	${PIXEL_SHADERS}
