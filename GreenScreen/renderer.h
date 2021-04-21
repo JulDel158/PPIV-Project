@@ -34,9 +34,12 @@ class Renderer
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
 		float specularPow = 10.0f;
 		XMFLOAT3 camwpos;
-		float specIntent = 0.7f;
+		float specIntent = 10.0f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
-		
+		float coneIratio = 0.9f;
+		XMFLOAT3 coneDir = { 0.0f, -0.01f, 1.0f };
+		float coneOratio = 0.01f;
+		float cRatio = 0.2f;
 	};
 
 	//the other shader for the instancing
@@ -57,8 +60,12 @@ class Renderer
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
 		float specularPow = 10.0f;
 		XMFLOAT3 camwpos;
-		float specIntent = 0.7f;
+		float specIntent = 10.0f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
+		float coneIratio = 0.9f;
+		XMFLOAT3 coneDir = { 0.0f, -0.01f, 1.0f };
+		float coneOratio = 0.01f;
+		float cRatio = 0.2f;
 	};
 	
 	struct VertexData
@@ -473,10 +480,13 @@ public:
 
 		SHADER_VARS pcb;
 		pcb.pLightRad = 5.0f;
-		iVars.pLightRad = pcb.pLightRad;
-		iVars.dLightdir = pcb.dLightdir;
+		
+		
 		pcb.pLightpos = Vars.pLightpos;
 		pcb.time = Vars.time;
+		pcb.spotPos = Vars.spotPos;
+		pcb.coneDir = Vars.coneDir;
+		
 		m.TransposeF(Vars.projection, pcb.projection);
 		m.TransposeF(Vars.view, pcb.view);
 		m.TransposeF(pcb.world, pcb.world);
@@ -552,13 +562,17 @@ public:
 		prevFrame = clock();
 		Vars.time = (1.0f / dt);*/
 		m.RotationYF(Camera.world, 0.01f, Camera.world);
-		m.RotationYF(Vars.world, 0.001f, Vars.world);
-		GW::MATH::GVECTORF tvec = { 0.0f,  2.0f, 0.0f };
-		tvec.x += 4.0f;
-		m.VectorXMatrixF(Vars.world, tvec, tvec);
+		//m.RotationYF(Vars.world, 0.001f, Vars.world);
+		GW::MATH::GVECTORF tvec = { 8.0f,  2.0f, 0.0f };
+		GW::MATH::GVECTORF svec = tvec;
+		//tvec.x += 4.0f;
+		svec.x -= 3.0f;
+		m.VectorXMatrixF(Camera.world, svec, svec);
+		m.VectorXMatrixF(Camera.world, tvec, tvec);
 		Vars.pLightpos = { tvec.x, tvec.y, tvec.z };
-		
-		
+		Vars.spotPos = { svec.x, svec.y, -svec.z };
+		Vars.coneDir = { -svec.x, -0.1f, -svec.z };
+		iVars.coneDir = Vars.coneDir;
 		GW::MATH::GMATRIXF rotateX;
 		GW::MATH::GMATRIXF rotateY;
 		float x;
@@ -590,6 +604,9 @@ public:
 		iVars.spotPos = Vars.spotPos;
 		iVars.specularPow = Vars.specularPow;
 		iVars.view = Vars.view;
+		iVars.specIntent = Vars.specIntent;
+		iVars.pLightRad = Vars.pLightRad;
+		iVars.dLightdir = Vars.dLightdir;
 	}
 
 	~Renderer()
