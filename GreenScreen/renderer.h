@@ -617,23 +617,20 @@ public:
 		}
 		input.GetMouseDelta(x, y);
 		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
-		m.RotationYF(GW::MATH::GIdentityMatrixF, - x * 0.001f, rotateY);
+		m.RotationYF(GW::MATH::GIdentityMatrixF,  x * 0.001f, rotateY);
 		m.InverseF(Vars.view, Vars.view);
 		/*m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );*/
-		m.MultiplyMatrixF(Vars.view, rotateY,Vars.view );
-		m.MultiplyMatrixF(Vars.view, rotateX,Vars.view);
+		m.MultiplyMatrixF(rotateX, rotateY, rotateX);
+		m.MultiplyMatrixF( rotateX, Vars.view, Vars.view);
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
 			GW::MATH::GVECTORF{ wasd[3] - wasd[1], 0, wasd[0] - wasd[2] }, move);
-		m.MultiplyMatrixF(Vars.view, move, Vars.view);
+		m.MultiplyMatrixF( move, Vars.view, Vars.view);
 		Vars.camwpos = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
+		GW::MATH::GVECTORF position = Vars.view.row4;
 		m.InverseF(Vars.view, Vars.view);
 
-
-
-		//GW::MATH::GVECTORF positionSkybox = { Vars.camwpos.x,Vars.camwpos.y,Vars.camwpos.z,1.0f};
 		skyboxSV.world = (GW::MATH::GMATRIXF&)XMMatrixTranslation(position.x, position.y, position.z);
-		//m.TranslatelocalF(skyboxSV.world, position, skyboxSV.world);
 		
 		
 		iVars.pLightpos = Vars.pLightpos;
