@@ -3,6 +3,7 @@
 #define GATEWARE_ENABLE_SYSTEM // Graphics libs require system level libraries
 #define GATEWARE_ENABLE_GRAPHICS // Enables all Graphics Libraries
 #define GATEWARE_ENABLE_MATH	// Enables Math Library 
+#define GATEWARE_ENABLE_INPUT // Enables Keyboard/Mouse/Controller Support
 // Ignore some GRAPHICS libraries we aren't going to use
 #define GATEWARE_DISABLE_GDIRECTX12SURFACE // we have another template for this
 #define GATEWARE_DISABLE_GRASTERSURFACE // we have another template for this
@@ -22,6 +23,7 @@ using namespace DirectX;
 IDXGISwapChain* pSwapChain = nullptr;
 ID3D11DeviceContext* pDeviceContext = nullptr;
 ID3D11RenderTargetView* pTargetView = nullptr;
+ID3D11DepthStencilView* pDepth = nullptr;
 
 void CleanUp();
 
@@ -39,7 +41,7 @@ int main()
 			//	clr[2] += 0; // move towards a cyan as they resize
 			});
 
-		if (+d3d11.Create(win, 0))
+		if (+d3d11.Create(win, GW::GRAPHICS::DEPTH_BUFFER_SUPPORT))
 		{
 			Renderer renderer(win, d3d11);
 			// main loop (runs until window is closed)
@@ -47,9 +49,13 @@ int main()
 			{
 				if (+d3d11.GetImmediateContext((void**)&pDeviceContext) &&
 					+d3d11.GetRenderTargetView((void**)&pTargetView) &&
+					+d3d11.GetDepthStencilView((void**)&pDepth) &&
 					+d3d11.GetSwapchain((void**)&pSwapChain))
 				{
 					pDeviceContext->ClearRenderTargetView(pTargetView, clr);
+					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
+					renderer.DrawSkyBox();
+					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
 					renderer.Update();
 
 					renderer.Render();
@@ -65,7 +71,7 @@ int main()
 
 void CleanUp()
 {
-	
+	if (pDepth) pDepth->Release();
 	if (pSwapChain) pSwapChain->Release();
 	if (pTargetView) pTargetView->Release();
 	if (pDeviceContext) pDeviceContext->Release();

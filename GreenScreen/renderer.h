@@ -4,8 +4,13 @@
 #include <directxcolors.h>
 #include "VertexShader.h"
 #include "PixelShader.h"
+#include "InstancePixelShader.h"
+#include "InstanceVertexShader.h"
+#include "SkyBoxPixelShader.h"
+#include "SkyBoxVertexShader.h"
 #include "Renderable.h"
 #include "axe2.h"
+#include "CUBE.h"
 #include "test_pyramid.h"
 #include "Wave_VS.h"
 #pragma comment(lib, "d3dcompiler.lib")
@@ -26,13 +31,53 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
-		XMFLOAT4 lightColor[2] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f} };
-		//Ka (ambient), Ks(specular), Kd(diffuse), a(shininess)
-		XMFLOAT4 material = { 1.0f, 1.0f, 1.0f, 0.5f };
-		XMFLOAT3 eye;
-		float wavelenght = 10.0f;
-		XMFLOAT2 wdir = { 1.0f, -1.0f };
-		float steepness = 0.5f;
+		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.2f, 0.3f, 0.0f, 0.3f} };
+		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
+		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
+		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
+		float specularPow = 10.0f;
+		XMFLOAT3 camwpos;
+		float specIntent = 10.0f;
+		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
+		float coneIratio = 1.0f;
+		XMFLOAT3 coneDir = { 0.0f, -0.01f, 1.0f };
+		float coneOratio = 0.9f;
+		float cRatio = 0.2f;
+	};
+
+	_declspec(align(16))
+		struct SHADER_VARS_SKYBOX {
+		GW::MATH::GMATRIXF world = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
+		XMFLOAT4 pos = { 0.0f,0.0f,0.0f,1.0f };
+
+	};
+
+	//the other shader for the instancing
+	_declspec(align(16))
+	struct SHADER_VARS_INSTANCE
+	{
+		GW::MATH::GMATRIXF world[10];
+		//UINT ID;
+		GW::MATH::GMATRIXF view = GW::MATH::GIdentityMatrixF;
+		GW::MATH::GMATRIXF projection = GW::MATH::GIdentityMatrixF;
+		float time = 0.0f;
+		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f };
+		float pLightRad = 7.5f;
+		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f };
+		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.6f, 0.6f, 0.2f, 0.3f} };
+		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
+		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
+		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
+		float specularPow = 10.0f;
+		XMFLOAT3 camwpos;
+		float specIntent = 10.0f;
+		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
+		float coneIratio = 1.0f;
+		XMFLOAT3 coneDir = { 0.0f, -0.01f, 1.0f };
+		float coneOratio = 0.9f;
+		float cRatio = 0.2f;
 	};
 	
 	struct VertexData
@@ -266,26 +311,114 @@ class Renderer
 		return grid;
 	}
 
+	void UpdateProjection(GW::GRAPHICS::GDirectX11Surface _d3d, GW::MATH::GMATRIXF *projectionMatrix)
+	{
+		GW::GReturn results = _d3d.GetAspectRatio(aspectRatio);
+		_aspectRatio = aspectRatio;
+		aspectRatio = 1 / aspectRatio; 
+		projectionMatrix->row1 = { ((1 / tanf((0.5 * fov) * G_PI_F / 180.0f)) * (aspectRatio)), (0.0f), (0.0f), (0.0f) };
+		projectionMatrix->row2 = { (0.0f), (1 / tanf((0.5f * fov) * G_PI_F / 180.0f)), (0.0f), (0.0f) };
+		projectionMatrix->row3 = { (0.0f), (0.0f), (zFar / (zFar - zNear)), (1.0f) };
+		projectionMatrix->row4 = { (0.0f), (0.0f), (-(zFar * zNear) / (zFar - zNear)), (0.0f) };
+	}
+
+	void UpdateFOVandPlane(GW::GRAPHICS::GDirectX11Surface _d3d, GW::MATH::GMATRIXF *projectionMatrix)
+	{
+		//Increase FOV
+		if (GetAsyncKeyState(VK_UP))
+		{
+			fov += 0.1f;
+			if (fov > 140)
+			{
+				fov = 140;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease FOV
+		else if (GetAsyncKeyState(VK_DOWN))
+		{
+			fov -= 0.1f;
+			if (fov < 40)
+			{
+				fov = 40;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+
+		//Increase ZNear
+		if (GetAsyncKeyState(VK_NUMPAD8))
+		{
+			zNear += 0.01f;
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease ZNear
+		else if (GetAsyncKeyState(VK_NUMPAD2))
+		{
+			zNear -= 0.01f;
+			if (zNear <= 0)
+			{
+				zNear = 0.01f;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Increase ZFar
+		if (GetAsyncKeyState(VK_NUMPAD6))
+		{
+			zFar += 0.01f;
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease ZFar
+		else if (GetAsyncKeyState(VK_NUMPAD4))
+		{
+			zFar -= 0.01f;
+			if (zFar < zNear)
+			{
+				zFar = zNear + 0.01f;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+	};
+
 	// proxy handles
 	GW::SYSTEM::GWindow win;
 	GW::GRAPHICS::GDirectX11Surface d3d;
 	// device and target view
 	ID3D11DeviceContext* con;
 	ID3D11RenderTargetView* view;
+	ID3D11DepthStencilView* depth;
 	//Renderable object used to load pyramid obj
 	Renderable pyramid;
 	Renderable axe;
 	Renderable grid;
 	Renderable testObj;
+	Renderable skyBox;
 	SHADER_VARS Vars;
+	SHADER_VARS Camera;
+	SHADER_VARS_INSTANCE iVars;
+	SHADER_VARS_SKYBOX skyboxSV;
+	
 
 	float prevFrame = clock();
 	float dt = 0;
-
+	float aspectRatio;
+	float _aspectRatio;
+	float fov = 2.0f;
+	float zNear = 0.01f;
+	float zFar = 100;
 	// math library handle
 	GW::MATH::GMatrix m;
+	// Input Library
+	GW::INPUT::GInput input;
 	// resource view for default texture
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
+	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyBoxSRV;
+
+	float X = 20.0f;
+	float Y = 10.0f;
+	float Z = -1.1f;
+	float rX = 0.0f; 
+	float rY = 0.0f;
+	float rZ = 0.0f; 
 
 public:
 
@@ -296,6 +429,9 @@ public:
 		d3d = _d3d;
 		ID3D11Device* pDevice = nullptr;
 		d3d.GetDevice((void**)&pDevice);
+
+		// create input lib
+		input.Create(_win);
 		
 		//loading obj data into mesh
 		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
@@ -305,12 +441,16 @@ public:
 
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
+		//loading skybox
+		MeshData<VertexData> skyBoxMesh;
+		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/CUBE.obj", skyBoxMesh);
 		
 		//Setting texture + sampler
 		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		pyramid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		grid.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		testObj.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		pyramid.CreateTextureandSampler(pDevice, "");
+		grid.CreateTextureandSampler(pDevice, "");
+		testObj.CreateTextureandSampler(pDevice, "");
+		skyBox.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/TestSkyBoxOcean.dds");
 
 		const uint32_t pixel = 0xFFFFFFFF;
 		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
@@ -327,10 +467,10 @@ public:
 		srvd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		srvd.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 		srvd.Texture2D.MipLevels = 1;
+		
 
 		pDevice->CreateShaderResourceView(tex.Get(),
 			&srvd, texSRV.GetAddressOf());
-
 		//making pyramid index and vertex buffers
 		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
 		//making axe buffers
@@ -339,6 +479,9 @@ public:
 		grid.CreateBuffers(pDevice, (float*)gMesh.vertices.data(), &gMesh.indicies, sizeof(VertexData), gMesh.vertices.size());
 		//test mesh buffers
 		testObj.CreateBuffers(pDevice, (float*)tMesh.vertices.data(), &tMesh.indicies, sizeof(VertexData), tMesh.vertices.size());
+		//skybox buffers
+		skyBox.CreateBuffers(pDevice, (float*)skyBoxMesh.vertices.data(), &skyBoxMesh.indicies, sizeof(VertexData), skyBoxMesh.vertices.size());
+
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -357,8 +500,8 @@ public:
 		};
 		
 		//creating v/p shaders and input layout
-		pyramid.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
-			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+		pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
+			InstancePixelShader, ARRAYSIZE(InstancePixelShader), format, ARRAYSIZE(format));
 
 		axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
@@ -368,6 +511,13 @@ public:
 
 		grid.CreateShadersandInputLayout(pDevice, Wave_VS, ARRAYSIZE(Wave_VS),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+
+		skyBox.CreateShadersandInputLayout(pDevice, SkyBoxVertexShader, ARRAYSIZE(SkyBoxVertexShader),
+			SkyBoxPixelShader, ARRAYSIZE(SkyBoxPixelShader), format, ARRAYSIZE(format));
+
+
+		
+
 		// Wave_VS, ARRAYSIZE(Wave_VS),
 		//init math stuff
 		m.Create();
@@ -378,21 +528,40 @@ public:
 					GW::MATH::GVECTORF{ 0,1,0 }, //up
 					Vars.view);
 
-		Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
+		//Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
 		
-		float ar;
-		d3d.GetAspectRatio(ar);
+		d3d.GetAspectRatio(aspectRatio);
 		//Initializing projection matrix
-		m.ProjectionDirectXLHF(G_PI_F / 2.0f, ar, 0.01f, 100, Vars.projection);
+		m.ProjectionDirectXLHF(G_PI_F / fov, aspectRatio, zNear, zFar, Vars.projection);
 
 		// create constant buffer
-		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_INSTANCE));
 		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		grid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		testObj.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		skyBox.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_SKYBOX));
 
 		//setting topology for grid
 		//grid.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+
+		//initializing the values of multiple instances for the other world matricies should now create a nomrmal pyramid at (2,2,2)
+		//iVars.ID = 0;
+		iVars.world[0].row1 = { 1.0f,0.0f,0.0f,0.0f };
+		iVars.world[0].row2 = { 0.0f,1.0f,0.0f,0.0f };
+		iVars.world[0].row3 = { 0.0f,0.0f,1.0f,0.0f };
+		iVars.world[0].row4 = { 0.0f,0.0f,0.0f,1.0f };
+
+		//setting up the others in a way that isn't absolute cancer like above
+		iVars.world[1] = iVars.world[0];
+		iVars.world[2] = iVars.world[0];
+		iVars.world[3] = iVars.world[0];
+		iVars.world[4] = iVars.world[0];
+		iVars.world[5] = iVars.world[0];
+		iVars.world[6] = iVars.world[0];
+		iVars.world[7] = iVars.world[0];
+		iVars.world[8] = iVars.world[0];
+		iVars.world[9] = iVars.world[0];
+
 
 		// free temporary handle
 		pDevice->Release();
@@ -403,39 +572,63 @@ public:
 		GW::MATH::GMATRIXF temp;
 		m.IdentityF(temp);
 		
-		
 		// grab the context & render target
 		d3d.GetImmediateContext((void**)&con);
 		d3d.GetRenderTargetView((void**)&view);
+		d3d.GetDepthStencilView((void**)&depth);
 		// setup the pipeline
 		ID3D11RenderTargetView *const views[] = { view };
-		con->OMSetRenderTargets(ARRAYSIZE(views), views, nullptr);
+		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
 
 		SHADER_VARS pcb;
+		pcb.pLightRad = 5.0f;
+		
+		
+		pcb.pLightpos = Vars.pLightpos;
 		pcb.time = Vars.time;
+		pcb.spotPos = Vars.spotPos;
+		pcb.coneDir = Vars.coneDir;
+		
 		m.TransposeF(Vars.projection, pcb.projection);
 		m.TransposeF(Vars.view, pcb.view);
 		m.TransposeF(pcb.world, pcb.world);
 
+
+		
+		iVars.time = Vars.time;
+		m.TransposeF(Vars.projection, iVars.projection);
+		m.TransposeF(Vars.view, iVars.view);
+		
+
+		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
+		m.ScalingF(temp, scale, iVars.world[0]);
+		m.TransposeF(iVars.world[0], iVars.world[0]);
+		//use this area to move other world matricies
+		GW::MATH::GVECTORF translate1 = { -1.0f, 0.0f, 0.0f }; //code that should move the first world matrix in the array to whatever coordinate
+		m.TranslatelocalF(temp, translate1, iVars.world[1]);
+
+		m.ScalingF(iVars.world[1], scale, iVars.world[1]);
+		m.TransposeF(iVars.world[1], iVars.world[1]);
+		
 		//drawing grid
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		grid.Draw(con);
 
-		GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
+		//GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 
 		//drawing pyramid
-		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &iVars, 0, 0);
 		pyramid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		pyramid.Draw(con);
-		//con->DrawIndexedInstanced(pyramid.iCount,2,0,0,0);
-		
+		//pyramid.Draw(con);
+		con->DrawIndexedInstanced(pyramid.iCount,2,0,0, 0);
+
 		//drawing test object
-		GW::MATH::GVECTORF translate = { 10.0f, -5.0f, 0.0f };
+		GW::MATH::GVECTORF translate = { 10.0f, 5.0f, 0.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
@@ -445,7 +638,7 @@ public:
 
 		//drawing axe
 		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
-		m.ScalingF(Vars.world, scale, pcb.world);
+		m.ScalingF(Camera.world, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
@@ -453,6 +646,7 @@ public:
 
 		// release temp handles
 		view->Release();
+		depth->Release();
 		con->Release();
 	}
 
@@ -469,18 +663,96 @@ public:
 		/*float dt = (clock() - prevFrame) / 10000.0f;
 		prevFrame = clock();
 		Vars.time = (1.0f / dt);*/
-		m.RotationYF(Vars.world, 0.01f, Vars.world);
-		/*GW::MATH::GVECTORF temp;
-		temp.x = Vars.dLightdir.x;
-		temp.y = Vars.dLightdir.y;
-		temp.z = Vars.dLightdir.z;
-		temp.w = 1.0f;
+		m.RotationYF(Camera.world, 0.01f, Camera.world);
+		//m.RotationYF(Vars.world, 0.001f, Vars.world);
+		GW::MATH::GVECTORF tvec = { 8.0f,  2.0f, 0.0f };
+		GW::MATH::GVECTORF svec = tvec;
+		//tvec.x += 4.0f;
+		svec.x -= 3.0f;
+		m.VectorXMatrixF(Camera.world, svec, svec);
+		m.VectorXMatrixF(Camera.world, tvec, tvec);
+		Vars.pLightpos = { tvec.x, tvec.y, tvec.z };
+		Vars.spotPos = { -tvec.x, tvec.y, -tvec.z };
+		//Vars.coneDir = { svec.x, svec.y, svec.z };
 		
-		m.VectorXMatrixF(Vars.world, temp, temp);
-		Vars.dLightdir.x = temp.x;
-		Vars.dLightdir.y = temp.y;
-		Vars.dLightdir.z = temp.z;*/
+		iVars.coneDir = Vars.coneDir;
+		GW::MATH::GMATRIXF rotateX;
+		GW::MATH::GMATRIXF rotateY;
+		float x;
+		float y; 
 
+		float keys[4] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D };
+		float wasd[4] = { 0, };
+		for (int i = 0; i < 4; i++)
+		{
+			input.GetState(keys[i], wasd[i]);
+		}
+		input.GetMouseDelta(x, y);
+		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
+		m.RotationYF(GW::MATH::GIdentityMatrixF,  x * 0.001f, rotateY);
+		m.InverseF(Vars.view, Vars.view);
+		/*m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );*/
+		m.MultiplyMatrixF(rotateX, rotateY, rotateX);
+		m.MultiplyMatrixF( rotateX, Vars.view, Vars.view);
+		GW::MATH::GMATRIXF move; 
+		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
+			GW::MATH::GVECTORF{ wasd[3] - wasd[1], 0, wasd[0] - wasd[2] }, move);
+		m.MultiplyMatrixF( move, Vars.view, Vars.view);
+		Vars.camwpos = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
+		GW::MATH::GVECTORF position = Vars.view.row4;
+		m.InverseF(Vars.view, Vars.view);
+
+		skyboxSV.world = (GW::MATH::GMATRIXF&)XMMatrixTranslation(position.x, position.y, position.z);
+		
+		
+		iVars.pLightpos = Vars.pLightpos;
+		iVars.lightColor[2] = Vars.lightColor[2];
+		iVars.camwpos = Vars.camwpos;
+		iVars.spotPos = Vars.spotPos;
+		iVars.specularPow = Vars.specularPow;
+		iVars.view = Vars.view;
+		iVars.specIntent = Vars.specIntent;
+		iVars.pLightRad = Vars.pLightRad;
+		iVars.dLightdir = Vars.dLightdir;
+
+		UpdateFOVandPlane(d3d, &Vars.projection);
+	}
+
+	void DrawSkyBox() {
+
+		GW::MATH::GMATRIXF temp;
+		m.IdentityF(temp);
+
+		// grab the context & render target
+		d3d.GetImmediateContext((void**)&con);
+		d3d.GetRenderTargetView((void**)&view);
+		d3d.GetDepthStencilView((void**)&depth);
+		// setup the pipeline
+		ID3D11RenderTargetView* const views[] = { view };
+		con->OMSetRenderTargets(ARRAYSIZE(views), views, depth);
+		
+		//SHADER_VARS_SKYBOX pcb;
+		//pcb.pos = { Vars.camwpos.x,Vars.camwpos.y,Vars.camwpos.z };
+	
+	
+		m.TransposeF(Vars.projection, skyboxSV.projection);
+		m.TransposeF(Vars.view, skyboxSV.view);
+		m.TransposeF(skyboxSV.world, skyboxSV.world);
+		
+		//draw the skybox around the camera
+		/*m.TransposeF(Vars.projection, skyboxSV.projection);
+		m.TransposeF(Vars.view, skyboxSV.view);
+		m.TransposeF(skyboxSV.world, skyboxSV.world);*/
+
+		//GW::MATH::GVECTORF scale = { 20.0f, 20.f, 20.0f, 1.0f };
+		//m.ScalingF(temp, scale, skyboxSV.world);
+		//m.TransposeF(skyboxSV.world, skyboxSV.world);
+
+		
+
+		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
+		skyBox.Bind(con);
+		skyBox.Draw(con);
 
 	}
 

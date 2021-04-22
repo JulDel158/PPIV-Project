@@ -91,7 +91,7 @@ public:
 		const wchar_t* wcstr = wstr.c_str();
 		HRESULT hr = CreateDDSTextureFromFile(device, wcstr, nullptr,
 			sResourceView.ReleaseAndGetAddressOf());
-		int potato = 5;
+
 		//Creating sampler
 		D3D11_SAMPLER_DESC sd = {};
 		sd.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
