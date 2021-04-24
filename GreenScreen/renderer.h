@@ -31,16 +31,18 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
-		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.6f, 0.6f, 0.2f, 0.3f} };
+		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.2f, 0.3f, 0.0f, 0.3f} };
 		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
 		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
-		float specularPow = 0.4f;
+		float specularPow = 10.0f;
 		XMFLOAT3 camwpos;
-		float specIntent = 0.7f;
+		float specIntent = 10.0f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
-		
-
+		float coneIratio = 1.0f;
+		XMFLOAT3 coneDir = { 0.0f, -0.01f, 1.0f };
+		float coneOratio = 0.9f;
+		float cRatio = 0.2f;
 	};
 
 	_declspec(align(16))
@@ -77,10 +79,14 @@ class Renderer
 		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
 		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
-		float specularPow = 0.4f;
+		float specularPow = 10.0f;
 		XMFLOAT3 camwpos;
-		float specIntent = 0.7f;
+		float specIntent = 10.0f;
 		XMFLOAT3 spotPos = { -5.0f, 2.0f, 0.0f };
+		float coneIratio = 1.0f;
+		XMFLOAT3 coneDir = { 0.0f, -0.01f, 1.0f };
+		float coneOratio = 0.9f;
+		float cRatio = 0.2f;
 	};
 	
 	struct VertexData
@@ -90,10 +96,6 @@ class Renderer
 		DirectX::XMFLOAT3 nrm;
 	};
 
-
-
-
-	
 
 	template <typename T>
 	struct MeshData
@@ -213,8 +215,6 @@ class Renderer
 			}
 		}
 		//container = tempContainer;
-
-
 		return true;
 	}
 
@@ -337,6 +337,20 @@ class Renderer
 	SHADER_VARS_INSTANCE iVars;
 	SHADER_VARS_SKYBOX skyboxSV;
 	
+
+#define MAX_SEAWEED_COUNT 50 //we'll start with a conservative number to not break things
+	//taking this rand float stuff cause it's too good to not have
+#define RAND_FLOAT(min,max) (((max)-(min))*(rand()/float(RAND_MAX))+(min))
+
+	//actually bringing the geometry shader and the other shaders it needs - side note, I should prob either make sure I release them later or just have be com pointers
+	ID3D11PixelShader* ps_Seaweed;
+	ID3D11VertexShader* vs_Seaweed;
+	ID3D11GeometryShader* gs_Seaweed;
+	ID3D11InputLayout* il_Seaweed; //using the il to preface
+	
+
+	Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizerState;//other stuff for function
+
 	//buffers for the seaweed
 	Microsoft::WRL::ComPtr<ID3D11Buffer> seaweedLocations;
 	Microsoft::WRL::ComPtr<ID3D11Buffer> seaweedDirections;
@@ -352,25 +366,6 @@ class Renderer
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> texSRV;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyBoxSRV;
 
-	// global varaibles for camera movment
-	/*GW::MATH::GVECTORF eyePosition{ 20.0f, 10.0f, -1.1f };
-	GW::MATH::GVECTORF targetPosition{ 0.0f, 0.0f, 0.0f };
-	GW::MATH::GVECTORF camUp{ 0,1,0 };
-
-	GW::MATH::GVECTORF defaultForward = { 0.0f, 0.0f, 1.0f, 0.0f };
-	GW::MATH::GVECTORF defaultRight = { 1.0f, 0.0f, 0.0f, 0.0f };
-	GW::MATH::GVECTORF camForward = { 0.0f, 0.0f, 1.0f, 0.0f };
-	GW::MATH::GVECTORF camRight = { 1.0f, 0.0f, 0.0f, 0.0f };
-
-	GW::MATH::GMatrix camRotationMatrix;
-	GW::MATH::GMatrix groundWorld;
-
-	float moveLeftRight = 0.0f;
-	float moveBackForward = 0.0f;
-
-	float camYaw = 0.0f;
-	float camPitch = 0.0f;*/
-	 
 	float X = 20.0f;
 	float Y = 10.0f;
 	float Z = -1.1f;
@@ -378,47 +373,6 @@ class Renderer
 	float rY = 0.0f;
 	float rZ = 0.0f; 
 
-	//void UpdateCamera()
-	//{
-	//	//rotating camera
-	//	m.RotationYawPitchRollF(camYaw, camPitch, 0, camRotationMatrix);
-	//	m.VectorXMatrixF(camRotationMatrix, defaultForward, targetPosition);
-	//	/*camTarget = XMVector3Normalize(camTarget);*/
-
-	//	GW::MATH::GMatrix tempYRotate;
-	//	m.RotationYF(camYaw, tempYRotate, tempYRotate);
-	//	
-	//	//updating camera
-	//     m.VectorXMatrixF(tempYRotate, defaultRight, camRight);
-	//	 m.VectorXMatrixF(tempYRotate, camUp, camUp);
-	//	 m.VectorXMatrixF(tempYRotate, defaultForward, camForward);
-
-	//	eyePosition += camRight * moveLeftRight;
-	//	eyePosition += moveBackForward * camForward;
-
-	//	moveLeftRight = 0.0f;
-	//	moveBackForward = 0.0f;
-
-	//	targetPosition = eyePosition + targetPosition;
-	//	//setting view matrix
-	//	m.LookAtLHF(eyePosition, targetPosition, camUp, Vars.view);
-	//	
-	//}
-
-	GW::MATH::GMATRIXF LocalXRotationF(GW::MATH::GMATRIXF inMatrix, float radian)
-	{
-		GW::MATH::GMATRIXF outMatrix; 
-		float c = cos(radian);
-		float s = sin(radian); 
-		GW::MATH::GMATRIXF Rotation = GW::MATH::GIdentityMatrixF;
-		Rotation.data[5] = c; 
-		Rotation.data[6] = s; 
-		Rotation.data[9] = -s;
-		Rotation.data[10] = c; 
-		GW::MATH::GMatrix::MultiplyMatrixF(Rotation, inMatrix, outMatrix);
-		return outMatrix;
-	};
-	
 public:
 
 	Renderer(GW::SYSTEM::GWindow _win, GW::GRAPHICS::GDirectX11Surface _d3d)
@@ -498,6 +452,7 @@ public:
 			}
 		};
 		
+		
 		//creating v/p shaders and input layout
 		pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
 			InstancePixelShader, ARRAYSIZE(InstancePixelShader), format, ARRAYSIZE(format));
@@ -514,8 +469,6 @@ public:
 		skyBox.CreateShadersandInputLayout(pDevice, SkyBoxVertexShader, ARRAYSIZE(SkyBoxVertexShader),
 			SkyBoxPixelShader, ARRAYSIZE(SkyBoxPixelShader), format, ARRAYSIZE(format));
 
-
-		
 
 		// Wave_VS, ARRAYSIZE(Wave_VS),
 		//init math stuff
@@ -582,14 +535,16 @@ public:
 
 		SHADER_VARS pcb;
 		pcb.pLightRad = 5.0f;
-		iVars.pLightRad = pcb.pLightRad;
-		iVars.dLightdir = pcb.dLightdir;
+		
+		
 		pcb.pLightpos = Vars.pLightpos;
 		pcb.time = Vars.time;
+		pcb.spotPos = Vars.spotPos;
+		pcb.coneDir = Vars.coneDir;
+		
 		m.TransposeF(Vars.projection, pcb.projection);
 		m.TransposeF(Vars.view, pcb.view);
 		m.TransposeF(pcb.world, pcb.world);
-
 
 		
 		iVars.time = Vars.time;
@@ -607,11 +562,17 @@ public:
 		m.ScalingF(iVars.world[1], scale, iVars.world[1]);
 		m.TransposeF(iVars.world[1], iVars.world[1]);
 		
+		//turning on the seaweed so that it will cover the "ocean"
+		//con->GSSetShader(gs_Seaweed,NULL,0);
+
 		//drawing grid
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		grid.Draw(con);
+
+		//ideally turning off the seaweed after so it's not being drawn on everything else
+		//con->GSSetShader(nullptr,nullptr,0);
 
 		//GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
@@ -662,51 +623,55 @@ public:
 		Vars.time = (1.0f / dt);*/
 		m.RotationYF(Camera.world, 0.01f, Camera.world);
 		//m.RotationYF(Vars.world, 0.001f, Vars.world);
-		GW::MATH::GVECTORF tvec = { 0.0f,  2.0f, 0.0f };
-		tvec.x += 4.0f;
-		m.VectorXMatrixF(Vars.world, tvec, tvec);
+		GW::MATH::GVECTORF tvec = { 8.0f,  2.0f, 0.0f };
+		GW::MATH::GVECTORF svec = tvec;
+		//tvec.x += 4.0f;
+		svec.x -= 3.0f;
+		m.VectorXMatrixF(Camera.world, svec, svec);
+		m.VectorXMatrixF(Camera.world, tvec, tvec);
 		Vars.pLightpos = { tvec.x, tvec.y, tvec.z };
-		iVars.pLightpos = Vars.pLightpos;
-		/*GW::MATH::GVECTORF temp;
-		temp.x = Vars.dLightdir.x;
-		temp.y = Vars.dLightdir.y;
-		temp.z = Vars.dLightdir.z;
-		temp.w = 1.0f;
+		Vars.spotPos = { -tvec.x, tvec.y, -tvec.z };
+		//Vars.coneDir = { svec.x, svec.y, svec.z };
 		
-		m.VectorXMatrixF(Vars.world, temp, temp);
-		Vars.dLightdir.x = temp.x;
-		Vars.dLightdir.y = temp.y;
-		Vars.dLightdir.z = temp.z;*/
+		iVars.coneDir = Vars.coneDir;
 		GW::MATH::GMATRIXF rotateX;
 		GW::MATH::GMATRIXF rotateY;
-		float x = 0.001f;
-		float y = 0.001f;
+		float x;
+		float y; 
 
-		float keys[8] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D, G_KEY_Q, G_KEY_E, G_KEY_Z, G_KEY_X };
-		float wasd[8] = { 0, };
+		float keys[4] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D };
+		float wasd[4] = { 0, };
 		for (int i = 0; i < 4; i++)
 		{
 			input.GetState(keys[i], wasd[i]);
 		}
-		m.InverseF(Vars.view, Vars.view);
 		input.GetMouseDelta(x, y);
-		rotateX = LocalXRotationF(GW::MATH::GIdentityMatrixF,  y * 0.001f);
-		m.RotationYF(GW::MATH::GIdentityMatrixF, - x *  0.001f, rotateY);
-		m.MultiplyMatrixF(Vars.view, rotateY,Vars.view );
-		m.MultiplyMatrixF(Vars.view, rotateX,Vars.view);
+		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
+		m.RotationYF(GW::MATH::GIdentityMatrixF,  x * 0.001f, rotateY);
+		m.InverseF(Vars.view, Vars.view);
+		/*m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );*/
+		m.MultiplyMatrixF(rotateX, rotateY, rotateX);
+		m.MultiplyMatrixF( rotateX, Vars.view, Vars.view);
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
-			GW::MATH::GVECTORF{ wasd[1] - wasd[3], 0, wasd[0] - wasd[2] }, move);
-		m.MultiplyMatrixF(Vars.view, move, Vars.view); 
-		GW::MATH::GVECTORF position = Vars.view.row4; 
+			GW::MATH::GVECTORF{ wasd[3] - wasd[1], 0, wasd[0] - wasd[2] }, move);
+		m.MultiplyMatrixF( move, Vars.view, Vars.view);
+		Vars.camwpos = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
+		GW::MATH::GVECTORF position = Vars.view.row4;
 		m.InverseF(Vars.view, Vars.view);
 
-
-
-		//GW::MATH::GVECTORF positionSkybox = { Vars.camwpos.x,Vars.camwpos.y,Vars.camwpos.z,1.0f};
 		skyboxSV.world = (GW::MATH::GMATRIXF&)XMMatrixTranslation(position.x, position.y, position.z);
-		//m.TranslatelocalF(skyboxSV.world, position, skyboxSV.world);
 		
+		
+		iVars.pLightpos = Vars.pLightpos;
+		iVars.lightColor[2] = Vars.lightColor[2];
+		iVars.camwpos = Vars.camwpos;
+		iVars.spotPos = Vars.spotPos;
+		iVars.specularPow = Vars.specularPow;
+		iVars.view = Vars.view;
+		iVars.specIntent = Vars.specIntent;
+		iVars.pLightRad = Vars.pLightRad;
+		iVars.dLightdir = Vars.dLightdir;
 	}
 
 
@@ -735,15 +700,73 @@ public:
 
 	void CreateSeaweed() {
 
+		ID3D11Device* pDevice = nullptr;
+		d3d.GetDevice((void**)&pDevice);
 		//geo shader stuff
 		static unsigned int numVert = 0;
 		static unsigned int numIndex = 0;
 
+		if (!seaweedLocations || !seaweedDirections) {
+			XMFLOAT4 seaweedPositions[MAX_SEAWEED_COUNT];
+			XMFLOAT4 seaweedDirectionsdone[MAX_SEAWEED_COUNT]; //yes i know basically named it the same thing, fight me
+			//looping to create the random XZ positions
+			for (unsigned int i = 0; i < MAX_SEAWEED_COUNT; i++) {
+				seaweedPositions[i] = XMFLOAT4(RAND_FLOAT(-5, 5), 0, RAND_FLOAT(-5, 5), RAND_FLOAT(0.2, 1));
+			}
+			//loop for the random directions even though I'm not really intersted in it right now -.-
+			for (unsigned int i = 0; i < MAX_SEAWEED_COUNT; i++) {
+				seaweedDirectionsdone[i] = XMFLOAT4(RAND_FLOAT(-0.5, 0.5), RAND_FLOAT(1.0, 2.5), RAND_FLOAT(-5, 5), RAND_FLOAT(0.2, 1)); //ideally we don't need to worry abotu this
+				XMStoreFloat4(&seaweedDirectionsdone[i], XMVector4Normalize(XMLoadFloat4(&seaweedDirectionsdone[i])));
+				//we'll rotate the seaweed but only a bit to make it seem like it's being affected by the waves more than just following basically
+				seaweedDirectionsdone[i].w = RAND_FLOAT(XMConvertToRadians(-2), XMConvertToRadians(-1));
+			}
+			//now comes the hard part - i'm doing it the non-normal way that we have been doing it cause I'm not sure how the geoshaders will take our current layout so sorry
+			//is this shameless? yes. Do I care? A little but not at the moment, what works works, other details can be fixed later
+			D3D11_BUFFER_DESC descriptor;
+			ZeroMemory(&descriptor, sizeof(descriptor));
+			descriptor.ByteWidth = sizeof(XMFLOAT4) * MAX_SEAWEED_COUNT;
+			descriptor.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+			//creating location vertex buffer
+			D3D11_SUBRESOURCE_DATA contents;
+			ZeroMemory(&contents, sizeof(contents));
+			contents.pSysMem = seaweedPositions;
+			pDevice->CreateBuffer(&descriptor, &contents, &seaweedLocations);
+			//doing the same for the directions even though we aren't focusing on it
+			contents.pSysMem = seaweedDirectionsdone;
+			pDevice->CreateBuffer(&descriptor, &contents, &seaweedDirections);
+
+			D3D11_RASTERIZER_DESC rasterizerDesc;
+			ZeroMemory(&rasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
+			rasterizerDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE; //now the seaweed won't disappear even if we manage to get behind it
+			pDevice->CreateRasterizerState(&rasterizerDesc, rasterizerState.GetAddressOf());
+		//	
+		//	//ok so assuming that we have set everything, lets hope to god that this will work or else we are uber fucked
+		//	//for now let's just put it on everything
+		//	how did we even get here....
+
+			//this dumb layout might not even end up being used but whatvever
+			D3D11_INPUT_ELEMENT_DESC geoShaderFormat[] = {
+				{
+					"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+					D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
+				},
+				{
+					"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+					D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
+				}
+			};
+
+			HRESULT hr;
+
+			hr = pDevice->CreateGeometryShader(gs_Seaweed, sizeof(gs_Seaweed),NULL, &gs_Seaweed);
+			hr = pDevice->CreateVertexShader(vs_Seaweed, sizeof(vs_Seaweed),NULL, &vs_Seaweed);
+			hr = pDevice->CreatePixelShader(ps_Seaweed, sizeof(ps_Seaweed),NULL, &ps_Seaweed);
+			hr = pDevice->CreateInputLayout(geoShaderFormat, ARRAYSIZE(geoShaderFormat),vs_Seaweed,sizeof(vs_Seaweed),&il_Seaweed);
+		}
+
 
 	}
-
-	
-
 
 	~Renderer()
 	{

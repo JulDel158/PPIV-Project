@@ -39,12 +39,12 @@
 //CONSTANT_BUFFER_BEGIN(SCENE_DATA)
 //SCENE_INFORMATION scene;
 //CONSTANT_BUFFER_END
-
-struct SEAWEED_VERTEX
-{
-	float4 position SEMANTIC(SV_POSITION);
-	float4 direction SEMANTIC(TEXCOORD);
-};
+//
+//struct SEAWEED_VERTEX
+//{
+//	float4 position SEMANTIC(SV_POSITION);
+//	float4 direction SEMANTIC(TEXCOORD);
+//};
 
 
 #endif //SHARED_DEFINES_H

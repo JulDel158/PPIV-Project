@@ -15,12 +15,13 @@ set(VERTEX_SHADERS
 	SkyBoxVertexShader.hlsl
 	InstanceVertexShader.hlsl
 	VertexShader.hlsl
-	Seaweed.hlsl
+	SeaweedVertex.hlsl
 	Wave_VS.hlsl
 )
 set(PIXEL_SHADERS 
 	# add pixel shader (.hlsl) files here
 	SkyBoxPixelShader.hlsl
+	SeaweedPixel.hlsl
 	InstancePixelShader.hlsl
 	PixelShader.hlsl
 )
@@ -34,21 +35,14 @@ add_executable (GreenScreen
 	# Header & CPP files go here
 	main.cpp
 	renderer.h
-	test_pyramid.h
-	VertexShader.h
-	PixelShader.h
+	test_pyramid.h	
 	SharedDefines.h
-	InstancePixelShader.h
-	InstanceVertexShader.h
-	SkyBoxPixelShader.h
-	SkyBoxVertexShader.h
 	Renderable.h
 	DDSTextureLoader.cpp
 	DDSTextureLoader.h
 	axe1.h
 	axe2.h
 	CUBE.h
-	Wave_VS.h
 	${VERTEX_SHADERS}
 	${PIXEL_SHADERS}
 	${GEOMETRY_SHADERS} 

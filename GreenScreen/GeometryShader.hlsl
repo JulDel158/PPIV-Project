@@ -1,6 +1,4 @@
 #include "SharedDefines.h"
-
-
 cbuffer SCENE_INFORMATION
 {
     float4x4 View;
@@ -9,6 +7,11 @@ cbuffer SCENE_INFORMATION
     float SeaweedHeight;
 };
 
+struct SEAWEED_VERTEX
+{
+    float4 position : SV_POSITION;
+    float4 direction : TEXCOORD;
+};
 
 struct GSOutput
 {
