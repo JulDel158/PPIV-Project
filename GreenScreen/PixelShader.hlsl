@@ -69,7 +69,6 @@ float4 ConeLight(float3 lightPos, float3 pos, float3 coneDirection, float coneRa
     return color * spotFactor * lightratio * attenuation;
 }
 
-
 // Apllying lights and texture mapping
 float4 main(PS_INPUT input) : SV_TARGET 
 {	
