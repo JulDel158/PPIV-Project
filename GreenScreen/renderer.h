@@ -681,9 +681,9 @@ public:
 		float x;
 		float y; 
 
-		float keys[4] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D };
-		float wasd[4] = { 0, };
-		for (int i = 0; i < 4; i++)
+		float keys[6] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D, G_KEY_Q, G_KEY_E };
+		float wasd[6] = { 0, };
+		for (int i = 0; i < 6; i++)
 		{
 			input.GetState(keys[i], wasd[i]);
 		}
@@ -696,14 +696,13 @@ public:
 		m.MultiplyMatrixF( rotateX, Vars.view, Vars.view);
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
-			GW::MATH::GVECTORF{ wasd[3] - wasd[1], 0, wasd[0] - wasd[2] }, move);
+			GW::MATH::GVECTORF{ wasd[3] - wasd[1], wasd[4] - wasd[5], wasd[0] - wasd[2] }, move);
 		m.MultiplyMatrixF( move, Vars.view, Vars.view);
 		Vars.camwpos = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
 		GW::MATH::GVECTORF position = Vars.view.row4;
 		m.InverseF(Vars.view, Vars.view);
 
 		skyboxSV.world = (GW::MATH::GMATRIXF&)XMMatrixTranslation(position.x, position.y, position.z);
-		
 		
 		iVars.pLightpos = Vars.pLightpos;
 		iVars.lightColor[2] = Vars.lightColor[2];
