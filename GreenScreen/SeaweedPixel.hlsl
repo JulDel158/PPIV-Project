@@ -12,11 +12,13 @@ cbuffer SCENE_INFORMATION
 struct SEAWEED_VERTEX
 {
     float4 position : SV_POSITION;
-    float4 direction : TEXCOORD;
+    float4 direction: TEXCOORD;
 };
 
-SEAWEED_VERTEX main(SEAWEED_VERTEX input)
+
+
+float4 main(SEAWEED_VERTEX input):SV_Target
 {
     //honestly not really sure if this is needed or can be done but hopefully it can 
-    return input;
+    return input.position;
 }

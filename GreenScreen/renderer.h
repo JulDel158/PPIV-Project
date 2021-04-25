@@ -470,6 +470,9 @@ public:
 			SkyBoxPixelShader, ARRAYSIZE(SkyBoxPixelShader), format, ARRAYSIZE(format));
 
 
+
+
+
 		// Wave_VS, ARRAYSIZE(Wave_VS),
 		//init math stuff
 		m.Create();
@@ -745,7 +748,7 @@ public:
 		//	//for now let's just put it on everything
 		//	how did we even get here....
 
-			//this dumb layout might not even end up being used but whatvever
+		//this dumb layout might not even end up being used but whatvever
 			D3D11_INPUT_ELEMENT_DESC geoShaderFormat[] = {
 				{
 					"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
@@ -759,10 +762,11 @@ public:
 
 			HRESULT hr;
 
-			hr = pDevice->CreateGeometryShader(gs_Seaweed, sizeof(gs_Seaweed),NULL, &gs_Seaweed);
-			hr = pDevice->CreateVertexShader(vs_Seaweed, sizeof(vs_Seaweed),NULL, &vs_Seaweed);
-			hr = pDevice->CreatePixelShader(ps_Seaweed, sizeof(ps_Seaweed),NULL, &ps_Seaweed);
-			hr = pDevice->CreateInputLayout(geoShaderFormat, ARRAYSIZE(geoShaderFormat),vs_Seaweed,sizeof(vs_Seaweed),&il_Seaweed);
+			hr = pDevice->CreateGeometryShader(gs_Seaweed, sizeof(gs_Seaweed), NULL, &gs_Seaweed);
+			hr = pDevice->CreateVertexShader(vs_Seaweed, sizeof(vs_Seaweed), NULL, &vs_Seaweed);
+			hr = pDevice->CreatePixelShader(ps_Seaweed, sizeof(ps_Seaweed), NULL, &ps_Seaweed);
+			hr = pDevice->CreateInputLayout(geoShaderFormat, ARRAYSIZE(geoShaderFormat), vs_Seaweed, sizeof(vs_Seaweed), &il_Seaweed);
+			
 		}
 
 
