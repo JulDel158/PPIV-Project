@@ -12,7 +12,6 @@
 // With what we want & what we don't defined we can include the API
 #include "../Gateware/Gateware.h"
 #include "renderer.h" // example rendering code (not Gateware code!)
-
 // open some namespaces to compact the code a bit
 using namespace GW;
 using namespace CORE;
@@ -44,6 +43,8 @@ int main()
 		if (+d3d11.Create(win, GW::GRAPHICS::DEPTH_BUFFER_SUPPORT))
 		{
 			Renderer renderer(win, d3d11);
+			unsigned int windowHeight = 0; 
+			unsigned int windowWidth = 0; 
 			// main loop (runs until window is closed)
 			while (+win.ProcessWindowEvents())
 			{
@@ -59,7 +60,41 @@ int main()
 					renderer.Update();
 					renderer.Render();
 					pSwapChain->Present(1, 0);
-					// release incremented COM reference counts
+
+					/*D3D11_VIEWPORT viewportOne;
+					win.GetHeight(windowHeight);
+					win.GetWidth(windowWidth);
+					viewportOne.Width = windowWidth ;
+					viewportOne.Height = windowHeight;
+					viewportOne.MinDepth = 0.0f;
+					viewportOne.MaxDepth = 1.0f;*/
+
+					unsigned int topLX = 0;
+					unsigned int topLY = 0;
+					win.GetClientTopLeft(topLX, topLY);
+
+					/*viewportOne.TopLeftX = (float)topLX;
+					viewportOne.TopLeftY = (float)topLY;
+					pDeviceContext->RSSetViewports(1, &viewportOne);*/
+
+					D3D11_VIEWPORT viewportTwo;
+					win.GetHeight(windowHeight);
+					win.GetWidth(windowWidth);
+					viewportTwo.Width = windowWidth;
+					viewportTwo.Height = windowHeight;
+					viewportTwo.MinDepth = 0.0f;
+					viewportTwo.MaxDepth = 1.0f;
+
+					topLX = windowWidth;
+					topLY = 0;
+
+					viewportTwo.TopLeftX = (float)topLX;
+					viewportTwo.TopLeftY = (float)topLY;
+
+					/*UpdateProjectionMatrix(d3d11, &projectionMatrix);*/
+					pDeviceContext->RSSetViewports(1, &viewportTwo);
+
+					//release incremented COM reference counts
 					CleanUp();
 				}
 			}
