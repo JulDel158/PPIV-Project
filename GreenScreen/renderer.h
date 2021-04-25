@@ -319,6 +319,74 @@ class Renderer
 		return grid;
 	}
 
+	void UpdateProjection(GW::GRAPHICS::GDirectX11Surface _d3d, GW::MATH::GMATRIXF *projectionMatrix)
+	{
+		GW::GReturn results = _d3d.GetAspectRatio(aspectRatio);
+		_aspectRatio = aspectRatio;
+		aspectRatio = 1 / aspectRatio; 
+		projectionMatrix->row1 = { ((1 / tanf((0.5 * fov) * G_PI_F / 180.0f)) * (aspectRatio)), (0.0f), (0.0f), (0.0f) };
+		projectionMatrix->row2 = { (0.0f), (1 / tanf((0.5f * fov) * G_PI_F / 180.0f)), (0.0f), (0.0f) };
+		projectionMatrix->row3 = { (0.0f), (0.0f), (zFar / (zFar - zNear)), (1.0f) };
+		projectionMatrix->row4 = { (0.0f), (0.0f), (-(zFar * zNear) / (zFar - zNear)), (0.0f) };
+	}
+
+	void UpdateFOVandPlane(GW::GRAPHICS::GDirectX11Surface _d3d, GW::MATH::GMATRIXF *projectionMatrix)
+	{
+		//Increase FOV
+		if (GetAsyncKeyState(VK_UP))
+		{
+			fov += 0.1f;
+			if (fov > 140)
+			{
+				fov = 140;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease FOV
+		else if (GetAsyncKeyState(VK_DOWN))
+		{
+			fov -= 0.1f;
+			if (fov < 40)
+			{
+				fov = 40;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+
+		//Increase ZNear
+		if (GetAsyncKeyState(VK_NUMPAD8))
+		{
+			zNear += 0.01f;
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease ZNear
+		else if (GetAsyncKeyState(VK_NUMPAD2))
+		{
+			zNear -= 0.01f;
+			if (zNear <= 0)
+			{
+				zNear = 0.01f;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Increase ZFar
+		if (GetAsyncKeyState(VK_NUMPAD6))
+		{
+			zFar += 0.01f;
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease ZFar
+		else if (GetAsyncKeyState(VK_NUMPAD4))
+		{
+			zFar -= 0.01f;
+			if (zFar < zNear)
+			{
+				zFar = zNear + 0.01f;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+	};
+
 	// proxy handles
 	GW::SYSTEM::GWindow win;
 	GW::GRAPHICS::GDirectX11Surface d3d;
@@ -357,7 +425,11 @@ class Renderer
 
 	float prevFrame = clock();
 	float dt = 0;
-
+	float aspectRatio;
+	float _aspectRatio;
+	float fov = 2.0f;
+	float zNear = 0.01f;
+	float zFar = 100;
 	// math library handle
 	GW::MATH::GMatrix m;
 	// Input Library
@@ -485,10 +557,9 @@ public:
 
 		//Vars.eye = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
 		
-		float ar;
-		d3d.GetAspectRatio(ar);
+		d3d.GetAspectRatio(aspectRatio);
 		//Initializing projection matrix
-		m.ProjectionDirectXLHF(G_PI_F / 2.0f, ar, 0.01f, 100, Vars.projection);
+		m.ProjectionDirectXLHF(G_PI_F / fov, aspectRatio, zNear, zFar, Vars.projection);
 
 		// create constant buffer
 		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_INSTANCE));
@@ -642,9 +713,9 @@ public:
 		float x;
 		float y; 
 
-		float keys[4] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D };
-		float wasd[4] = { 0, };
-		for (int i = 0; i < 4; i++)
+		float keys[6] = { G_KEY_W, G_KEY_A, G_KEY_S, G_KEY_D, G_KEY_Q, G_KEY_E };
+		float wasd[6] = { 0, };
+		for (int i = 0; i < 6; i++)
 		{
 			input.GetState(keys[i], wasd[i]);
 		}
@@ -657,14 +728,13 @@ public:
 		m.MultiplyMatrixF( rotateX, Vars.view, Vars.view);
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
-			GW::MATH::GVECTORF{ wasd[3] - wasd[1], 0, wasd[0] - wasd[2] }, move);
+			GW::MATH::GVECTORF{ wasd[3] - wasd[1], wasd[4] - wasd[5], wasd[0] - wasd[2] }, move);
 		m.MultiplyMatrixF( move, Vars.view, Vars.view);
 		Vars.camwpos = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
 		GW::MATH::GVECTORF position = Vars.view.row4;
 		m.InverseF(Vars.view, Vars.view);
 
 		skyboxSV.world = (GW::MATH::GMATRIXF&)XMMatrixTranslation(position.x, position.y, position.z);
-		
 		
 		iVars.pLightpos = Vars.pLightpos;
 		iVars.lightColor[2] = Vars.lightColor[2];
@@ -675,8 +745,9 @@ public:
 		iVars.specIntent = Vars.specIntent;
 		iVars.pLightRad = Vars.pLightRad;
 		iVars.dLightdir = Vars.dLightdir;
-	}
 
+		UpdateFOVandPlane(d3d, &Vars.projection);
+	}
 
 	void DrawSkyBox() {
 
@@ -760,13 +831,13 @@ public:
 				}
 			};
 
-			HRESULT hr;
+		/*	HRESULT hr;
 
 			hr = pDevice->CreateGeometryShader(gs_Seaweed, sizeof(gs_Seaweed), NULL, &gs_Seaweed);
 			hr = pDevice->CreateVertexShader(vs_Seaweed, sizeof(vs_Seaweed), NULL, &vs_Seaweed);
 			hr = pDevice->CreatePixelShader(ps_Seaweed, sizeof(ps_Seaweed), NULL, &ps_Seaweed);
 			hr = pDevice->CreateInputLayout(geoShaderFormat, ARRAYSIZE(geoShaderFormat), vs_Seaweed, sizeof(vs_Seaweed), &il_Seaweed);
-			
+			*/
 		}
 
 
