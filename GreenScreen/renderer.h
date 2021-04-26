@@ -688,11 +688,11 @@ public:
 			input.GetState(keys[i], wasd[i]);
 		}
 		input.GetMouseDelta(x, y);
-		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
-		m.RotationYF(GW::MATH::GIdentityMatrixF,  x * 0.001f, rotateY);
+		m.RotationXF(GW::MATH::GIdentityMatrixF,  x * 0.0001f , rotateX);
+		m.RotationYF(GW::MATH::GIdentityMatrixF,  y * 0.0001f, rotateY);
 		m.InverseF(Vars.view, Vars.view);
-		/*m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );*/
-		m.MultiplyMatrixF(rotateX, rotateY, rotateX);
+		m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );
+		m.MultiplyMatrixF( rotateY, rotateX,  rotateX);
 		m.MultiplyMatrixF( rotateX, Vars.view, Vars.view);
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
