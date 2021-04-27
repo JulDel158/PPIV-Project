@@ -16,6 +16,12 @@ struct SEAWEED_VERTEX
 };
 
 
+struct VS_INPUT
+{
+    float3 pos : POSITION0;
+    float3 uvw : TEXCOORD0;
+    float3 nrm : NORMAL;
+};
 
 float4 main(SEAWEED_VERTEX input):SV_Target
 {

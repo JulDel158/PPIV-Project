@@ -408,12 +408,14 @@ class Renderer
 	SHADER_VARS Camera;
 	SHADER_VARS_INSTANCE iVars;
 	SHADER_VARS_SKYBOX skyboxSV;
+	SCENE_INFORMATION scene;
 	
 
 #define MAX_SEAWEED_COUNT 50 //we'll start with a conservative number to not break things
 	//taking this rand float stuff cause it's too good to not have
 #define RAND_FLOAT(min,max) (((max)-(min))*(rand()/float(RAND_MAX))+(min))
 
+	//will likely be taken out soon v
 	//actually bringing the geometry shader and the other shaders it needs - side note, I should prob either make sure I release them later or just have be com pointers
 	ID3D11PixelShader* ps_Seaweed;
 	ID3D11VertexShader* vs_Seaweed;
@@ -467,6 +469,9 @@ public:
 			test_pyramid_vertexcount, test_pyramid_indexcount);
 		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe2_data, axe2_indicies, axe2_vertexcount, axe2_indexcount);
 		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
+		MeshData<VertexData> seaweedMesh = MakePlaneGrid(2, 2);
+		
+		
 
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project-main/GreenScreen/test02.obj", tMesh);
@@ -480,6 +485,7 @@ public:
 		grid.CreateTextureandSampler(pDevice, "");
 		testObj.CreateTextureandSampler(pDevice, "");
 		skyBox.CreateTextureandSampler(pDevice, "../PPIV-Project-main/GreenScreen/TestSkyBoxOcean.dds");
+		seaweed.CreateTextureandSampler(pDevice, "");
 
 		const uint32_t pixel = 0xFFFFFFFF;
 		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
@@ -510,7 +516,9 @@ public:
 		testObj.CreateBuffers(pDevice, (float*)tMesh.vertices.data(), &tMesh.indicies, sizeof(VertexData), tMesh.vertices.size());
 		//skybox buffers
 		skyBox.CreateBuffers(pDevice, (float*)skyBoxMesh.vertices.data(), &skyBoxMesh.indicies, sizeof(VertexData), skyBoxMesh.vertices.size());
-
+		//seaweed buffers
+		seaweed.CreateBuffers(pDevice, (float*)seaweedMesh.vertices.data(), &seaweedMesh.indicies, sizeof(VertexData), seaweedMesh.vertices.size());
+		
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -541,12 +549,18 @@ public:
 			}
 		};
 
+
 		HRESULT hr;
 		
-		hr = pDevice->CreatePixelShader(SeaweedPixel, sizeof(SeaweedPixel), nullptr, &ps_Seaweed);
-		hr = pDevice->CreateVertexShader(SeaweedVertex, sizeof(SeaweedVertex), nullptr, &vs_Seaweed);
-		hr = pDevice->CreateGeometryShader(GeometryShader, sizeof(GeometryShader), nullptr, &gs_Seaweed);
-		hr = pDevice->CreateInputLayout(geoShaderFormat, ARRAYSIZE(geoShaderFormat), SeaweedVertex, sizeof(SeaweedVertex), &il_Seaweed);
+		//hr = pDevice->CreatePixelShader(SeaweedPixel, sizeof(SeaweedPixel), nullptr, &ps_Seaweed);
+		//hr = pDevice->CreateVertexShader(SeaweedVertex, sizeof(SeaweedVertex), nullptr, &vs_Seaweed);
+		//hr = pDevice->CreateGeometryShader(GeometryShader, sizeof(GeometryShader), nullptr, &gs_Seaweed);
+		//hr = pDevice->CreateInputLayout(geoShaderFormat, ARRAYSIZE(geoShaderFormat), SeaweedVertex, sizeof(SeaweedVertex), &il_Seaweed);
+		//using renderable code
+		seaweed.CreateGeometryShader(pDevice,GeometryShader, ARRAYSIZE(GeometryShader));
+		seaweed.CreateShadersandInputLayout(pDevice, SeaweedVertex, ARRAYSIZE(SeaweedVertex),
+			SeaweedPixel, ARRAYSIZE(SeaweedPixel), format, ARRAYSIZE(format));
+
 
 		//creating v/p shaders and input layout
 		pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
@@ -590,9 +604,10 @@ public:
 		grid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		testObj.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		skyBox.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_SKYBOX));
-
+		seaweed.CreateConstantBuffer(pDevice, sizeof(SCENE_INFORMATION));
 		//setting topology for grid
 		//grid.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_LINELIST;
+		seaweed.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_POINTLIST;
 
 		//initializing the values of multiple instances for the other world matricies should now create a nomrmal pyramid at (2,2,2)
 		//iVars.ID = 0;
@@ -661,6 +676,12 @@ public:
 		
 		//turning on the seaweed so that it will cover the "ocean"
 		//con->GSSetShader(gs_Seaweed,NULL,0);
+		//testing to see if this won't just straight break everything
+		con->UpdateSubresource(seaweed.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		seaweed.Bind(con);
+		seaweed.Draw(con);
+		seaweed.UnBind(con);
+
 
 		//ideally turning off the seaweed after so it's not being drawn on everything else
 		//con->GSSetShader(nullptr,nullptr,0);
@@ -844,6 +865,7 @@ public:
 			D3D11_RASTERIZER_DESC rasterizerDesc;
 			ZeroMemory(&rasterizerDesc, sizeof(D3D11_RASTERIZER_DESC));
 			rasterizerDesc.CullMode = D3D11_CULL_MODE::D3D11_CULL_NONE; //now the seaweed won't disappear even if we manage to get behind it
+			rasterizerDesc.FillMode = D3D11_FILL_MODE::D3D11_FILL_SOLID;
 			pDevice->CreateRasterizerState(&rasterizerDesc, rasterizerState.GetAddressOf());
 		//	
 		//	//ok so assuming that we have set everything, lets hope to god that this will work or else we are uber fucked
