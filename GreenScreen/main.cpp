@@ -56,8 +56,8 @@ int main()
 					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
 					renderer.DrawSkyBox();
 					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
-					renderer.Update();
 					renderer.CreateSeaweed();
+					renderer.Update();
 					renderer.Render();
 					pSwapChain->Present(1, 0);
 					// release incremented COM reference counts

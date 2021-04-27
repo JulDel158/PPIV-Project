@@ -8,6 +8,9 @@
 #include "InstanceVertexShader.h"
 #include "SkyBoxPixelShader.h"
 #include "SkyBoxVertexShader.h"
+#include "SeaweedPixel.h"
+#include "SeaweedVertex.h"
+#include "GeometryShader.h"
 #include "Renderable.h"
 #include "axe2.h"
 #include "CUBE.h"
@@ -400,6 +403,7 @@ class Renderer
 	Renderable grid;
 	Renderable testObj;
 	Renderable skyBox;
+	Renderable seaweed;
 	SHADER_VARS Vars;
 	SHADER_VARS Camera;
 	SHADER_VARS_INSTANCE iVars;
@@ -417,7 +421,7 @@ class Renderer
 	ID3D11InputLayout* il_Seaweed; //using the il to preface
 	
 
-	Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizerState;//other stuff for function
+	Microsoft::WRL::ComPtr<ID3D11RasterizerState> rasterizerState; //other stuff for function
 
 	//buffers for the seaweed
 	Microsoft::WRL::ComPtr<ID3D11Buffer> seaweedLocations;
@@ -525,6 +529,25 @@ public:
 		};
 		
 		
+		//this dumb layout might not even end up being used but whatvever
+		D3D11_INPUT_ELEMENT_DESC geoShaderFormat[] = {
+			{
+				"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
+			},
+			{
+				"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
+				D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
+			}
+		};
+
+		HRESULT hr;
+		
+		hr = pDevice->CreatePixelShader(SeaweedPixel, sizeof(SeaweedPixel), nullptr, &ps_Seaweed);
+		hr = pDevice->CreateVertexShader(SeaweedVertex, sizeof(SeaweedVertex), nullptr, &vs_Seaweed);
+		hr = pDevice->CreateGeometryShader(GeometryShader, sizeof(GeometryShader), nullptr, &gs_Seaweed);
+		hr = pDevice->CreateInputLayout(geoShaderFormat, ARRAYSIZE(geoShaderFormat), SeaweedVertex, sizeof(SeaweedVertex), &il_Seaweed);
+
 		//creating v/p shaders and input layout
 		pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
 			InstancePixelShader, ARRAYSIZE(InstancePixelShader), format, ARRAYSIZE(format));
@@ -639,14 +662,14 @@ public:
 		//turning on the seaweed so that it will cover the "ocean"
 		//con->GSSetShader(gs_Seaweed,NULL,0);
 
+		//ideally turning off the seaweed after so it's not being drawn on everything else
+		//con->GSSetShader(nullptr,nullptr,0);
+
 		//drawing grid
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		grid.Draw(con);
-
-		//ideally turning off the seaweed after so it's not being drawn on everything else
-		//con->GSSetShader(nullptr,nullptr,0);
 
 		//GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
@@ -719,13 +742,17 @@ public:
 		{
 			input.GetState(keys[i], wasd[i]);
 		}
-		input.GetMouseDelta(x, y);
+
+		if (input.GetMouseDelta(x, y) == GW::GReturn::REDUNDANT) { x = y = 0; }
 		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
 		m.RotationYF(GW::MATH::GIdentityMatrixF,  x * 0.001f, rotateY);
 		m.InverseF(Vars.view, Vars.view);
 		/*m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );*/
-		m.MultiplyMatrixF(rotateX, rotateY, rotateX);
+		//m.MultiplyMatrixF(rotateX, rotateY, rotateX);
+		GW::MATH::GVECTORF save = Vars.view.row4;
 		m.MultiplyMatrixF( rotateX, Vars.view, Vars.view);
+		m.MultiplyMatrixF(Vars.view, rotateY, Vars.view);
+		Vars.view.row4 = save;
 		GW::MATH::GMATRIXF move; 
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
 			GW::MATH::GVECTORF{ wasd[3] - wasd[1], wasd[4] - wasd[5], wasd[0] - wasd[2] }, move);
@@ -769,6 +796,10 @@ public:
 		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
 		skyBox.Bind(con);
 		skyBox.Draw(con);
+
+
+
+
 	}
 
 
@@ -819,25 +850,8 @@ public:
 		//	//for now let's just put it on everything
 		//	how did we even get here....
 
-		//this dumb layout might not even end up being used but whatvever
-			D3D11_INPUT_ELEMENT_DESC geoShaderFormat[] = {
-				{
-					"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
-					D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
-				},
-				{
-					"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0,
-					D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0
-				}
-			};
-
-		/*	HRESULT hr;
-
-			hr = pDevice->CreateGeometryShader(gs_Seaweed, sizeof(gs_Seaweed), NULL, &gs_Seaweed);
-			hr = pDevice->CreateVertexShader(vs_Seaweed, sizeof(vs_Seaweed), NULL, &vs_Seaweed);
-			hr = pDevice->CreatePixelShader(ps_Seaweed, sizeof(ps_Seaweed), NULL, &ps_Seaweed);
-			hr = pDevice->CreateInputLayout(geoShaderFormat, ARRAYSIZE(geoShaderFormat), vs_Seaweed, sizeof(vs_Seaweed), &il_Seaweed);
-			*/
+		
+			
 		}
 
 

@@ -38,6 +38,8 @@ public:
 	//Shaders
 	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vShader = nullptr;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader = nullptr;
+	Microsoft::WRL::ComPtr<ID3D11GeometryShader> gShader = nullptr;
+
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	inputLayout = nullptr;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer = nullptr;
 
