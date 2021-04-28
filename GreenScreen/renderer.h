@@ -53,6 +53,8 @@ class Renderer
 	{
 		XMFLOAT4X4 View;
 		XMFLOAT4X4 Projection;
+		XMFLOAT3 gridPos;
+		float padding;
 		float SeaweedWidth;
 		float SeaweedHeight;
 	};
@@ -409,7 +411,7 @@ class Renderer
 	SHADER_VARS_INSTANCE iVars;
 	SHADER_VARS_SKYBOX skyboxSV;
 	SCENE_INFORMATION scene;
-	
+	bool done = true;
 
 #define MAX_SEAWEED_COUNT 50 //we'll start with a conservative number to not break things
 	//taking this rand float stuff cause it's too good to not have
@@ -468,9 +470,8 @@ public:
 		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
 			test_pyramid_vertexcount, test_pyramid_indexcount);
 		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe2_data, axe2_indicies, axe2_vertexcount, axe2_indexcount);
-		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
-		MeshData<VertexData> seaweedMesh = MakePlaneGrid(2, 2);
-		
+		MeshData<VertexData> gMesh = MakePlaneGrid(500, 500);
+		MeshData<VertexData> seaweedMesh = MakePlaneGrid(100, 100,3);
 		
 
 		MeshData<VertexData> tMesh;
@@ -648,7 +649,6 @@ public:
 		SHADER_VARS pcb;
 		pcb.pLightRad = 5.0f;
 		
-		
 		pcb.pLightpos = Vars.pLightpos;
 		pcb.time = Vars.time;
 		pcb.spotPos = Vars.spotPos;
@@ -668,6 +668,7 @@ public:
 		m.ScalingF(temp, scale, iVars.world[0]);
 		m.TransposeF(iVars.world[0], iVars.world[0]);
 		//use this area to move other world matricies
+
 		GW::MATH::GVECTORF translate1 = { -1.0f, 0.0f, 0.0f }; //code that should move the first world matrix in the array to whatever coordinate
 		m.TranslatelocalF(temp, translate1, iVars.world[1]);
 
@@ -675,16 +676,16 @@ public:
 		m.TransposeF(iVars.world[1], iVars.world[1]);
 		
 		//turning on the seaweed so that it will cover the "ocean"
-		//con->GSSetShader(gs_Seaweed,NULL,0);
 		//testing to see if this won't just straight break everything
-		con->UpdateSubresource(seaweed.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		scene.Projection = *reinterpret_cast<XMFLOAT4X4*>(&pcb.projection);
+		scene.View = *reinterpret_cast<XMFLOAT4X4*>(&pcb.view);
+		scene.SeaweedHeight = 4.0f;
+		scene.SeaweedWidth = 0.5f;
+		scene.gridPos = XMFLOAT3(0.0f, 1.0f, 0.0f);
+		con->UpdateSubresource(seaweed.constantBuffer.Get(), 0, nullptr, &scene, 0, 0);
 		seaweed.Bind(con);
-		seaweed.Draw(con);
+		con->DrawIndexedInstanced(seaweed.iCount, 2, 0, 0, 0);
 		seaweed.UnBind(con);
-
-
-		//ideally turning off the seaweed after so it's not being drawn on everything else
-		//con->GSSetShader(nullptr,nullptr,0);
 
 		//drawing grid
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
@@ -817,9 +818,6 @@ public:
 		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
 		skyBox.Bind(con);
 		skyBox.Draw(con);
-
-
-
 
 	}
 

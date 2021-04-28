@@ -4,6 +4,7 @@ cbuffer SCENE_INFORMATION
 {
     float4x4 View;
     float4x4 Projection;
+    float3 gridPos;
     float SeaweedWidth;
     float SeaweedHeight;
 };
