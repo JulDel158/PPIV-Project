@@ -12,7 +12,9 @@
 #include "axe2.h"
 #include "CUBE.h"
 #include "test_pyramid.h"
+#include "uploads_files_737265_1.h"
 #include "Wave_VS.h"
+#include "Cannon.h"
 #pragma comment(lib, "d3dcompiler.lib")
 
 using namespace DirectX;
@@ -31,7 +33,7 @@ class Renderer
 		XMFLOAT3 dLightdir = { -1.0f, 0.0f, 0.0f};
 		float pLightRad = 7.5f;
 		XMFLOAT3 pLightpos = { 0.0f, 4.5f, 0.0f};
-		XMFLOAT4 lightColor[3] = { {0.0f, 0.32f, 0.84f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.2f, 0.3f, 0.0f, 0.3f} };
+		XMFLOAT4 lightColor[3] = { {0.5f, 0.5f, 0.5f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {0.2f, 0.3f, 0.0f, 0.3f} };
 		XMFLOAT4 wave1 = { 1.0f, 1.0f, 0.25f, 30.0f };
 		XMFLOAT4 wave2 = { 1.0f, 0.6f, 0.25f, 16.0f };
 		XMFLOAT4 wave3 = { 1.0f, 1.3f, 0.25f, 8.0f };
@@ -387,11 +389,15 @@ class Renderer
 	ID3D11RenderTargetView* view;
 	ID3D11DepthStencilView* depth;
 	//Renderable object used to load pyramid obj
-	Renderable pyramid;
-	Renderable axe;
+	//Renderable pyramid;
+	//Renderable axe;
+	Renderable cannon;
+	Renderable lh;
 	Renderable grid;
-	Renderable testObj;
+	Renderable chest;
 	Renderable skyBox;
+	Renderable island;
+
 	SHADER_VARS Vars;
 	SHADER_VARS Camera;
 	SHADER_VARS_INSTANCE iVars;
@@ -434,23 +440,34 @@ public:
 		input.Create(_win);
 		
 		//loading obj data into mesh
-		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
-			test_pyramid_vertexcount, test_pyramid_indexcount);
-		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe2_data, axe2_indicies, axe2_vertexcount, axe2_indexcount);
-		MeshData<VertexData> gMesh = MakePlaneGrid(50, 50);
+		/*MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
+			test_pyramid_vertexcount, test_pyramid_indexcount);*/
+		//MeshData<VertexData> aMesh = LoadMeshFromHeader(axe2_data, axe2_indicies, axe2_vertexcount, axe2_indexcount);
+		
+		//canon
+		MeshData<VertexData> cMesh = LoadMeshFromHeader(Cannon_data, Cannon_indicies, Cannon_vertexcount, Cannon_indexcount);
 
+		//plane grid
+		MeshData<VertexData> gMesh = MakePlaneGrid(400, 400);
+		//island with palms
+		MeshData<VertexData> iMesh = LoadMeshFromHeader(uploads_files_737265_1_data, uploads_files_737265_1_indicies,
+														uploads_files_737265_1_vertexcount, uploads_files_737265_1_indexcount);
+		//treasure chest
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
-		//loading skybox
+
+		//skybox
 		MeshData<VertexData> skyBoxMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/CUBE.obj", skyBoxMesh);
 		
 		//Setting texture + sampler
-		axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
-		pyramid.CreateTextureandSampler(pDevice, "");
+		//axe.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/axeTexture.dds");
+		//pyramid.CreateTextureandSampler(pDevice, "");
 		grid.CreateTextureandSampler(pDevice, "");
-		testObj.CreateTextureandSampler(pDevice, "");
+		chest.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/TreasureChestTexture.dds");
 		skyBox.CreateTextureandSampler(pDevice, "../PPIV-Project/GreenScreen/TestSkyBoxOcean.dds");
+		cannon.CreateTextureandSampler(pDevice, "");
+		island.CreateTextureandSampler(pDevice, "");
 
 		const uint32_t pixel = 0xFFFFFFFF;
 		D3D11_SUBRESOURCE_DATA initData = { &pixel, sizeof(uint32_t), 0 };
@@ -472,16 +489,19 @@ public:
 		pDevice->CreateShaderResourceView(tex.Get(),
 			&srvd, texSRV.GetAddressOf());
 		//making pyramid index and vertex buffers
-		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
+		//pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
 		//making axe buffers
-		axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), &aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
+		//axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), &aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
 		//making grid buffers
 		grid.CreateBuffers(pDevice, (float*)gMesh.vertices.data(), &gMesh.indicies, sizeof(VertexData), gMesh.vertices.size());
 		//test mesh buffers
-		testObj.CreateBuffers(pDevice, (float*)tMesh.vertices.data(), &tMesh.indicies, sizeof(VertexData), tMesh.vertices.size());
+		chest.CreateBuffers(pDevice, (float*)tMesh.vertices.data(), &tMesh.indicies, sizeof(VertexData), tMesh.vertices.size());
 		//skybox buffers
 		skyBox.CreateBuffers(pDevice, (float*)skyBoxMesh.vertices.data(), &skyBoxMesh.indicies, sizeof(VertexData), skyBoxMesh.vertices.size());
 
+		island.CreateBuffers(pDevice, (float*)iMesh.vertices.data(), &iMesh.indicies, sizeof(VertexData), iMesh.vertices.size());
+
+		cannon.CreateBuffers(pDevice, (float*)cMesh.vertices.data(), &cMesh.indicies, sizeof(VertexData), cMesh.vertices.size());
 
 		// Create Input Layout
 		D3D11_INPUT_ELEMENT_DESC format[] = {
@@ -500,13 +520,19 @@ public:
 		};
 		
 		//creating v/p shaders and input layout
-		pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
-			InstancePixelShader, ARRAYSIZE(InstancePixelShader), format, ARRAYSIZE(format));
+		/*pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
+			InstancePixelShader, ARRAYSIZE(InstancePixelShader), format, ARRAYSIZE(format));*/
 
-		axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
+		/*axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));*/
+
+		chest.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
-		testObj.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
+		cannon.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
+
+		island.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
 		grid.CreateShadersandInputLayout(pDevice, Wave_VS, ARRAYSIZE(Wave_VS),
@@ -514,9 +540,6 @@ public:
 
 		skyBox.CreateShadersandInputLayout(pDevice, SkyBoxVertexShader, ARRAYSIZE(SkyBoxVertexShader),
 			SkyBoxPixelShader, ARRAYSIZE(SkyBoxPixelShader), format, ARRAYSIZE(format));
-
-
-		
 
 		// Wave_VS, ARRAYSIZE(Wave_VS),
 		//init math stuff
@@ -535,10 +558,12 @@ public:
 		m.ProjectionDirectXLHF(G_PI_F / fov, aspectRatio, zNear, zFar, Vars.projection);
 
 		// create constant buffer
-		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_INSTANCE));
-		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		//pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_INSTANCE));
+		//axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		grid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
-		testObj.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		cannon.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		chest.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		island.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		skyBox.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_SKYBOX));
 
 		//setting topology for grid
@@ -566,6 +591,42 @@ public:
 		// free temporary handle
 		pDevice->Release();
 	}
+
+private:
+	void scene1()
+	{
+		GW::MATH::GMATRIXF im;
+		m.IdentityF(im);
+		GW::MATH::GVECTORF scale = { 1.5f, 1.5f, 1.5f, 1.0f };
+		SHADER_VARS cb = Vars;
+		m.TransposeF(Vars.projection, cb.projection);
+		m.TransposeF(Vars.view, cb.view);
+
+		//island draw
+		m.ScalingF(im, scale, cb.world);
+		scale = { 0,2.5f,0 };
+		m.TranslatelocalF(cb.world, scale, cb.world);
+		m.TransposeF(cb.world, cb.world);
+		con->UpdateSubresource(island.constantBuffer.Get(), 0, nullptr, &cb, 0, 0);
+		island.Bind(con);
+		island.Draw(con);
+
+		//cannon draw
+		scale = { 2.5f, 2.5f, 2.5f };
+		m.ScalingF(im, scale, cb.world);
+		scale = { 0,1.5f,0 };
+		m.TranslatelocalF(cb.world, scale, cb.world);
+		m.TransposeF(cb.world, cb.world);
+		con->UpdateSubresource(cannon.constantBuffer.Get(), 0, nullptr, &cb, 0, 0);
+		cannon.Bind(con);
+		cannon.Draw(con);
+
+		//light house
+
+	}
+
+public:
+
 	//Bind objects to render and update constant buffers 
 	void Render()
 	{
@@ -593,7 +654,8 @@ public:
 		m.TransposeF(Vars.view, pcb.view);
 		m.TransposeF(pcb.world, pcb.world);
 
-
+		
+		
 		
 		iVars.time = Vars.time;
 		m.TransposeF(Vars.projection, iVars.projection);
@@ -616,33 +678,36 @@ public:
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		grid.Draw(con);
 
+		
+		scene1();
+
 		//GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		m.ScalingF(temp, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 
 		//drawing pyramid
-		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &iVars, 0, 0);
-		pyramid.Bind(con);
-		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		//pyramid.Draw(con);
-		con->DrawIndexedInstanced(pyramid.iCount,2,0,0, 0);
+		//con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &iVars, 0, 0);
+		//pyramid.Bind(con);
+		//con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		////pyramid.Draw(con);
+		//con->DrawIndexedInstanced(pyramid.iCount,2,0,0, 0);
 
 		//drawing test object
 		GW::MATH::GVECTORF translate = { 10.0f, 5.0f, 0.0f };
 		m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
-		testObj.Bind(con);
-		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		testObj.Draw(con);
+		con->UpdateSubresource(chest.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		chest.Bind(con);
+		//con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		chest.Draw(con);
 
 		//drawing axe
-		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
+		/*scale = { 0.3f, 0.3f, 0.3f, 1.0f };
 		m.ScalingF(Camera.world, scale, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
 		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
-		axe.Draw(con);
+		axe.Draw(con);*/
 
 		// release temp handles
 		view->Release();
@@ -687,17 +752,20 @@ public:
 		{
 			input.GetState(keys[i], wasd[i]);
 		}
-		input.GetMouseDelta(x, y);
-		m.RotationXF(GW::MATH::GIdentityMatrixF,  x * 0.0001f , rotateX);
-		m.RotationYF(GW::MATH::GIdentityMatrixF,  y * 0.0001f, rotateY);
+		if (input.GetMouseDelta(x, y) == GW::GReturn::REDUNDANT) { x = y = 0; }
+		m.RotationXF(GW::MATH::GIdentityMatrixF, y * 0.01f, rotateX);
+		m.RotationYF(GW::MATH::GIdentityMatrixF, x * 0.01f, rotateY);
 		m.InverseF(Vars.view, Vars.view);
-		m.RotationYawPitchRollF(x/360, y/360, 0.0f, rotateX );
-		m.MultiplyMatrixF( rotateY, rotateX,  rotateX);
-		m.MultiplyMatrixF( rotateX, Vars.view, Vars.view);
-		GW::MATH::GMATRIXF move; 
+		// m.RotationYawPitchRollF(x / 360, y / 360, 0.0f, rotateX); /
+		//m.MultiplyMatrixF(rotateX, rotateY, rotateX);
+		GW::MATH::GVECTORF save = Vars.view.row4;
+		m.MultiplyMatrixF(rotateX, Vars.view, Vars.view);
+		m.MultiplyMatrixF(Vars.view, rotateY, Vars.view);
+		Vars.view.row4 = save;
+		GW::MATH::GMATRIXF move;
 		m.TranslatelocalF(GW::MATH::GIdentityMatrixF,
 			GW::MATH::GVECTORF{ wasd[3] - wasd[1], wasd[4] - wasd[5], wasd[0] - wasd[2] }, move);
-		m.MultiplyMatrixF( move, Vars.view, Vars.view);
+		m.MultiplyMatrixF(move, Vars.view, Vars.view);
 		Vars.camwpos = { Vars.view.row1.x, Vars.view.row1.y, Vars.view.row1.z };
 		GW::MATH::GVECTORF position = Vars.view.row4;
 		m.InverseF(Vars.view, Vars.view);
@@ -753,10 +821,15 @@ public:
 		skyBox.Bind(con);
 		skyBox.Draw(con);
 
+		view->Release();
+		depth->Release();
+		con->Release();
 	}
 
 	~Renderer()
 	{
+		//texSRV->Release();
+		//skyBoxSRV->Release();
 		// ComPtr will auto release so nothing to do here 
 	}
 };

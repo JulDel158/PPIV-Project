@@ -85,15 +85,15 @@ float4 main(PS_INPUT input) : SV_TARGET
     //spot light
     float4 spotLight = ConeLight(spotPos, input.worldpos, coneDir, cRatio, coneIratio, coneOratio, input.nrm, lightColor[2]);
     
-    //specular reflection
-    float3 viewdir = normalize(camwpos - input.worldpos);
-    float3 halfvec = normalize((-dLightdir) + viewdir);
-    float a1 = pow(saturate(dot(input.nrm, halfvec)), specularPow);
-    float intensity = max(a1, 0);
-    float4 reflectedlight = (float4)(1.0f, 1.0f, 1.0f, 1.0f) * specIntent * intensity;
+    ////specular reflection
+    //float3 viewdir = normalize(camwpos - input.worldpos);
+    //float3 halfvec = normalize((-dLightdir) + viewdir);
+    //float a1 = pow(saturate(dot(input.nrm, halfvec)), specularPow);
+    //float intensity = max(a1, 0);
+    //float4 reflectedlight = (float4)(1.0f, 1.0f, 1.0f, 1.0f) * specIntent * intensity;
     
     //combine lights and texture 
-    finalColor += dirLight + pointlight + spotLight + reflectedlight;
+    finalColor += dirLight + pointlight + spotLight;
     finalColor *= txDiffuse.Sample(samLinear, (float2) input.uvw);
     return finalColor;
 }

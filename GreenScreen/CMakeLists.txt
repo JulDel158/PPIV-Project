@@ -44,6 +44,8 @@ add_executable (GreenScreen
 	CUBE.h
 	Wave_VS.h
         uploads_files_737265_1.h
+	Cannon.h
+	lh2.h
 	${VERTEX_SHADERS}
 	${PIXEL_SHADERS}
 )
