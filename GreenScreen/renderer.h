@@ -322,8 +322,8 @@ class Renderer
 	ID3D11RenderTargetView* view;
 	ID3D11DepthStencilView* depth;
 	//Renderable object used to load pyramid obj
-	//Renderable pyramid;
-	//Renderable axe;
+	Renderable pyramid;
+	Renderable axe;
 	Renderable cannon;
 	Renderable lh;
 	Renderable grid;
@@ -337,13 +337,15 @@ class Renderer
 	SHADER_VARS_SKYBOX skyboxSV;
 	
 
+	bool regenerate = true;
+
 	float prevFrame = clock();
 	float dt = 0;
 	float aspectRatio;
 	float _aspectRatio;
 	float fov = 2.0f;
 	float zNear = 0.01f;
-	float zFar = 100;
+	float zFar = 1000;
 	// math library handle
 	GW::MATH::GMatrix m;
 	// Input Library
@@ -373,9 +375,9 @@ public:
 		input.Create(_win);
 		
 		//loading obj data into mesh
-		/*MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
-			test_pyramid_vertexcount, test_pyramid_indexcount);*/
-		//MeshData<VertexData> aMesh = LoadMeshFromHeader(axe2_data, axe2_indicies, axe2_vertexcount, axe2_indexcount);
+		MeshData<VertexData> pMesh = LoadMeshFromHeader(test_pyramid_data, test_pyramid_indicies, 
+			test_pyramid_vertexcount, test_pyramid_indexcount);
+		MeshData<VertexData> aMesh = LoadMeshFromHeader(axe2_data, axe2_indicies, axe2_vertexcount, axe2_indexcount);
 		
 		//canon
 		MeshData<VertexData> cMesh = LoadMeshFromHeader(Cannon_data, Cannon_indicies, Cannon_vertexcount, Cannon_indexcount);
@@ -388,6 +390,9 @@ public:
 		//treasure chest
 		MeshData<VertexData> tMesh;
 		LoadMeshFromOBJ("../PPIV-Project/GreenScreen/test02.obj", tMesh);
+
+		//lighthouse
+
 
 		//skybox
 		MeshData<VertexData> skyBoxMesh;
@@ -422,9 +427,9 @@ public:
 		pDevice->CreateShaderResourceView(tex.Get(),
 			&srvd, texSRV.GetAddressOf());
 		//making pyramid index and vertex buffers
-		//pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
+		pyramid.CreateBuffers(pDevice, (float*)pMesh.vertices.data(), &pMesh.indicies, sizeof(VertexData), pMesh.vertices.size());
 		//making axe buffers
-		//axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), &aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
+		axe.CreateBuffers(pDevice, (float*)aMesh.vertices.data(), &aMesh.indicies, sizeof(VertexData), aMesh.vertices.size());
 		//making grid buffers
 		grid.CreateBuffers(pDevice, (float*)gMesh.vertices.data(), &gMesh.indicies, sizeof(VertexData), gMesh.vertices.size());
 		//test mesh buffers
@@ -453,11 +458,11 @@ public:
 		};
 		
 		//creating v/p shaders and input layout
-		/*pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
-			InstancePixelShader, ARRAYSIZE(InstancePixelShader), format, ARRAYSIZE(format));*/
+		pyramid.CreateShadersandInputLayout(pDevice, InstanceVertexShader, ARRAYSIZE(InstanceVertexShader),
+			InstancePixelShader, ARRAYSIZE(InstancePixelShader), format, ARRAYSIZE(format));
 
-		/*axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
-			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));*/
+		axe.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader), 
+			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
 
 		chest.CreateShadersandInputLayout(pDevice, VertexShader, ARRAYSIZE(VertexShader),
 			PixelShader, ARRAYSIZE(PixelShader), format, ARRAYSIZE(format));
@@ -491,8 +496,8 @@ public:
 		m.ProjectionDirectXLHF(G_PI_F / fov, aspectRatio, zNear, zFar, Vars.projection);
 
 		// create constant buffer
-		//pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_INSTANCE));
-		//axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
+		pyramid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS_INSTANCE));
+		axe.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		grid.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		cannon.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
 		chest.CreateConstantBuffer(pDevice, sizeof(SHADER_VARS));
@@ -531,24 +536,34 @@ private:
 		GW::MATH::GMATRIXF im;
 		m.IdentityF(im);
 		GW::MATH::GVECTORF scale = { 1.5f, 1.5f, 1.5f, 1.0f };
+		GW::MATH::GVECTORF translate = { 0.0f, 2.5f, 0.0f };
 		SHADER_VARS cb = Vars;
 		m.TransposeF(Vars.projection, cb.projection);
 		m.TransposeF(Vars.view, cb.view);
 
+		//Drawing Skybox
+		m.TransposeF(Vars.projection, skyboxSV.projection);
+		m.TransposeF(Vars.view, skyboxSV.view);
+		m.TransposeF(skyboxSV.world, skyboxSV.world);
+		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
+		skyBox.Bind(con);
+		skyBox.Draw(con);
+		con->ClearDepthStencilView(depth, D3D11_CLEAR_DEPTH, 1, 0);
+
 		//island draw
 		m.ScalingF(im, scale, cb.world);
-		scale = { 0,2.5f,0 };
-		m.TranslatelocalF(cb.world, scale, cb.world);
+		m.TranslatelocalF(cb.world, translate, cb.world);
 		m.TransposeF(cb.world, cb.world);
 		con->UpdateSubresource(island.constantBuffer.Get(), 0, nullptr, &cb, 0, 0);
 		island.Bind(con);
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
 		island.Draw(con);
 
 		//cannon draw
 		scale = { 2.5f, 2.5f, 2.5f };
 		m.ScalingF(im, scale, cb.world);
-		scale = { 0,1.5f,0 };
-		m.TranslatelocalF(cb.world, scale, cb.world);
+		translate = { 0,1.5f,0 };
+		m.TranslatelocalF(cb.world, translate, cb.world);
 		m.TransposeF(cb.world, cb.world);
 		con->UpdateSubresource(cannon.constantBuffer.Get(), 0, nullptr, &cb, 0, 0);
 		cannon.Bind(con);
@@ -556,6 +571,24 @@ private:
 
 		//light house
 
+
+
+
+		//treasure chest
+		translate = {4.85f, -0.55f, -11.5f };
+		m.TranslatelocalF(im, translate, cb.world);
+		m.TransposeF(cb.world, cb.world);
+		con->UpdateSubresource(chest.constantBuffer.Get(), 0, nullptr, &cb, 0, 0);
+		chest.Bind(con);
+		
+		chest.Draw(con);
+
+		//water
+		m.TransposeF(im, cb.world);
+		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &cb, 0, 0);
+		grid.Bind(con);
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		grid.Draw(con);
 	}
 
 public:
@@ -577,7 +610,6 @@ public:
 		SHADER_VARS pcb;
 		pcb.pLightRad = 5.0f;
 		
-		
 		pcb.pLightpos = Vars.pLightpos;
 		pcb.time = Vars.time;
 		pcb.spotPos = Vars.spotPos;
@@ -586,8 +618,6 @@ public:
 		m.TransposeF(Vars.projection, pcb.projection);
 		m.TransposeF(Vars.view, pcb.view);
 		m.TransposeF(pcb.world, pcb.world);
-
-		
 		
 		
 		iVars.time = Vars.time;
@@ -619,20 +649,13 @@ public:
 		viewportOne.TopLeftY = (float)topLY;
 	    con->RSSetViewports(1, &viewportOne);
 		
-		//Drawing Skybox
-		m.TransposeF(Vars.projection, skyboxSV.projection);
-		m.TransposeF(Vars.view, skyboxSV.view);
-		m.TransposeF(skyboxSV.world, skyboxSV.world);
-		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
-		skyBox.Bind(con);
-		skyBox.Draw(con);
-		con->ClearDepthStencilView(depth, D3D11_CLEAR_DEPTH, 1, 0);
+		
 
 		//drawing grid
-		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		/*con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		grid.Draw(con);
+		grid.Draw(con);*/
 
 		
 		scene1();
@@ -648,14 +671,7 @@ public:
 		////pyramid.Draw(con);
 		//con->DrawIndexedInstanced(pyramid.iCount,2,0,0, 0);
 
-		//drawing test object
-		GW::MATH::GVECTORF translate = { 10.0f, 5.0f, 0.0f };
-		m.TranslatelocalF(temp, translate, pcb.world);
-		m.TransposeF(pcb.world, pcb.world);
-		con->UpdateSubresource(chest.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
-		chest.Bind(con);
-		//con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		chest.Draw(con);
+		
 
 		//drawing axe
 		/*scale = { 0.3f, 0.3f, 0.3f, 1.0f };
@@ -690,10 +706,10 @@ public:
 		con->ClearDepthStencilView(depth, D3D11_CLEAR_DEPTH, 1, 0);
 
 		//drawing grid
-		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		/*con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
+		grid.Draw(con);*/
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		grid.Draw(con);
 
 		//GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
 		//m.ScalingF(temp, scale, pcb.world);
@@ -708,12 +724,12 @@ public:
 
 		//drawing test object
 		/*GW::MATH::GVECTORF translate = { 10.0f, 5.0f, 0.0f };*/
-		m.TranslatelocalF(temp, translate, pcb.world);
+		/*m.TranslatelocalF(temp, translate, pcb.world);
 		m.TransposeF(pcb.world, pcb.world);
-		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
-		testObj.Bind(con);
+		con->UpdateSubresource(chest.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		chest.Bind(con);
 		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
-		testObj.Draw(con);
+		chest.Draw(con);*/
 
 		//drawing axe
 		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
