@@ -311,73 +311,6 @@ class Renderer
 		return grid;
 	}
 
-	void UpdateProjection(GW::GRAPHICS::GDirectX11Surface _d3d, GW::MATH::GMATRIXF *projectionMatrix)
-	{
-		GW::GReturn results = _d3d.GetAspectRatio(aspectRatio);
-		_aspectRatio = aspectRatio;
-		aspectRatio = 1 / aspectRatio; 
-		projectionMatrix->row1 = { ((1 / tanf((0.5 * fov) * G_PI_F / 180.0f)) * (aspectRatio)), (0.0f), (0.0f), (0.0f) };
-		projectionMatrix->row2 = { (0.0f), (1 / tanf((0.5f * fov) * G_PI_F / 180.0f)), (0.0f), (0.0f) };
-		projectionMatrix->row3 = { (0.0f), (0.0f), (zFar / (zFar - zNear)), (1.0f) };
-		projectionMatrix->row4 = { (0.0f), (0.0f), (-(zFar * zNear) / (zFar - zNear)), (0.0f) };
-	}
-
-	void UpdateFOVandPlane(GW::GRAPHICS::GDirectX11Surface _d3d, GW::MATH::GMATRIXF *projectionMatrix)
-	{
-		//Increase FOV
-		if (GetAsyncKeyState(VK_UP))
-		{
-			fov += 0.1f;
-			if (fov > 140)
-			{
-				fov = 140;
-			}
-			UpdateProjection(_d3d, projectionMatrix);
-		}
-		//Decrease FOV
-		else if (GetAsyncKeyState(VK_DOWN))
-		{
-			fov -= 0.1f;
-			if (fov < 40)
-			{
-				fov = 40;
-			}
-			UpdateProjection(_d3d, projectionMatrix);
-		}
-
-		//Increase ZNear
-		if (GetAsyncKeyState(VK_NUMPAD8))
-		{
-			zNear += 0.01f;
-			UpdateProjection(_d3d, projectionMatrix);
-		}
-		//Decrease ZNear
-		else if (GetAsyncKeyState(VK_NUMPAD2))
-		{
-			zNear -= 0.01f;
-			if (zNear <= 0)
-			{
-				zNear = 0.01f;
-			}
-			UpdateProjection(_d3d, projectionMatrix);
-		}
-		//Increase ZFar
-		if (GetAsyncKeyState(VK_NUMPAD6))
-		{
-			zFar += 0.01f;
-			UpdateProjection(_d3d, projectionMatrix);
-		}
-		//Decrease ZFar
-		else if (GetAsyncKeyState(VK_NUMPAD4))
-		{
-			zFar -= 0.01f;
-			if (zFar < zNear)
-			{
-				zFar = zNear + 0.01f;
-			}
-			UpdateProjection(_d3d, projectionMatrix);
-		}
-	};
 
 	// proxy handles
 	GW::SYSTEM::GWindow win;
@@ -610,6 +543,29 @@ public:
 		m.ScalingF(iVars.world[1], scale, iVars.world[1]);
 		m.TransposeF(iVars.world[1], iVars.world[1]);
 		
+		D3D11_VIEWPORT viewportOne;
+		viewportOne.Width = 400;
+		viewportOne.Height = 600;
+		viewportOne.MinDepth = 0.0f;
+		viewportOne.MaxDepth = 1.0f;
+
+		unsigned int topLX = 0;
+		unsigned int topLY = 0;
+		win.GetClientTopLeft(topLX, topLY);
+
+		viewportOne.TopLeftX = (float)topLX;
+		viewportOne.TopLeftY = (float)topLY;
+	    con->RSSetViewports(1, &viewportOne);
+		
+		//Drawing Skybox
+		m.TransposeF(Vars.projection, skyboxSV.projection);
+		m.TransposeF(Vars.view, skyboxSV.view);
+		m.TransposeF(skyboxSV.world, skyboxSV.world);
+		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
+		skyBox.Bind(con);
+		skyBox.Draw(con);
+		con->ClearDepthStencilView(depth, D3D11_CLEAR_DEPTH, 1, 0);
+
 		//drawing grid
 		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		grid.Bind(con);
@@ -643,6 +599,65 @@ public:
 		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
 		axe.Bind(con);
 		axe.Draw(con);
+
+	
+
+		D3D11_VIEWPORT viewportTwo;
+		viewportTwo.Width = 400;
+		viewportTwo.Height = 600;
+		viewportTwo.MinDepth = 0.0f;
+		viewportTwo.MaxDepth = 1.0f;
+
+		topLX = 400;
+		topLY = 0;
+		viewportTwo.TopLeftX = (float)topLX;
+		viewportTwo.TopLeftY = (float)topLY;
+
+		con->RSSetViewports(1, &viewportTwo);
+
+		//Drawing Skybox
+		////m.TransposeF(Vars.projection, skyboxSV.projection);
+		////m.TransposeF(Vars.view, skyboxSV.view);
+		////m.TransposeF(skyboxSV.world, skyboxSV.world);
+		con->UpdateSubresource(skyBox.constantBuffer.Get(), 0, nullptr, &skyboxSV, 0, 0);
+		skyBox.Bind(con);
+		skyBox.Draw(con);
+		con->ClearDepthStencilView(depth, D3D11_CLEAR_DEPTH, 1, 0);
+
+		//drawing grid
+		con->UpdateSubresource(grid.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		grid.Bind(con);
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		grid.Draw(con);
+
+		//GW::MATH::GVECTORF scale = { 10.0f, 10.f, 10.0f, 1.0f };
+		//m.ScalingF(temp, scale, pcb.world);
+		//m.TransposeF(pcb.world, pcb.world);
+
+		//drawing pyramid
+		con->UpdateSubresource(pyramid.constantBuffer.Get(), 0, nullptr, &iVars, 0, 0);
+		pyramid.Bind(con);
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		//pyramid.Draw(con);
+		con->DrawIndexedInstanced(pyramid.iCount, 2, 0, 0, 0);
+
+		//drawing test object
+		/*GW::MATH::GVECTORF translate = { 10.0f, 5.0f, 0.0f };*/
+		m.TranslatelocalF(temp, translate, pcb.world);
+		m.TransposeF(pcb.world, pcb.world);
+		con->UpdateSubresource(testObj.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		testObj.Bind(con);
+		con->PSSetShaderResources(0, 1, texSRV.GetAddressOf());
+		testObj.Draw(con);
+
+		//drawing axe
+		scale = { 0.3f, 0.3f, 0.3f, 1.0f };
+		m.ScalingF(Camera.world, scale, pcb.world);
+		m.TransposeF(pcb.world, pcb.world);
+		con->UpdateSubresource(axe.constantBuffer.Get(), 0, nullptr, &pcb, 0, 0);
+		axe.Bind(con);
+		axe.Draw(con);
+
 
 		// release temp handles
 		view->Release();
@@ -687,7 +702,7 @@ public:
 		{
 			input.GetState(keys[i], wasd[i]);
 		}
-		input.GetMouseDelta(x, y);
+		input.GetMouseDelta(x, y); x = y = 0;
 		m.RotationXF(GW::MATH::GIdentityMatrixF,  y * 0.001f , rotateX);
 		m.RotationYF(GW::MATH::GIdentityMatrixF,  x * 0.001f, rotateY);
 		m.InverseF(Vars.view, Vars.view);
@@ -715,6 +730,8 @@ public:
 		iVars.dLightdir = Vars.dLightdir;
 
 		UpdateFOVandPlane(d3d, &Vars.projection);
+
+		
 	}
 
 	void DrawSkyBox() {
@@ -737,15 +754,7 @@ public:
 		m.TransposeF(Vars.projection, skyboxSV.projection);
 		m.TransposeF(Vars.view, skyboxSV.view);
 		m.TransposeF(skyboxSV.world, skyboxSV.world);
-		
-		//draw the skybox around the camera
-		/*m.TransposeF(Vars.projection, skyboxSV.projection);
-		m.TransposeF(Vars.view, skyboxSV.view);
-		m.TransposeF(skyboxSV.world, skyboxSV.world);*/
-
-		//GW::MATH::GVECTORF scale = { 20.0f, 20.f, 20.0f, 1.0f };
-		//m.ScalingF(temp, scale, skyboxSV.world);
-		//m.TransposeF(skyboxSV.world, skyboxSV.world);
+	
 
 		
 
@@ -754,6 +763,75 @@ public:
 		skyBox.Draw(con);
 
 	}
+
+
+	void UpdateProjection(GW::GRAPHICS::GDirectX11Surface _d3d, GW::MATH::GMATRIXF* projectionMatrix)
+	{
+		GW::GReturn results = _d3d.GetAspectRatio(aspectRatio);
+		_aspectRatio = aspectRatio;
+		aspectRatio = 1 / aspectRatio;
+		projectionMatrix->row1 = { ((1 / tanf((0.5 * fov) * G_PI_F / 180.0f)) * (aspectRatio)), (0.0f), (0.0f), (0.0f) };
+		projectionMatrix->row2 = { (0.0f), (1 / tanf((0.5f * fov) * G_PI_F / 180.0f)), (0.0f), (0.0f) };
+		projectionMatrix->row3 = { (0.0f), (0.0f), (zFar / (zFar - zNear)), (1.0f) };
+		projectionMatrix->row4 = { (0.0f), (0.0f), (-(zFar * zNear) / (zFar - zNear)), (0.0f) };
+	}
+
+	void UpdateFOVandPlane(GW::GRAPHICS::GDirectX11Surface _d3d, GW::MATH::GMATRIXF* projectionMatrix)
+	{
+		//Increase FOV
+		if (GetAsyncKeyState(VK_UP))
+		{
+			fov += 0.1f;
+			if (fov > 140)
+			{
+				fov = 140;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease FOV
+		else if (GetAsyncKeyState(VK_DOWN))
+		{
+			fov -= 0.1f;
+			if (fov < 40)
+			{
+				fov = 40;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+
+		//Increase ZNear
+		if (GetAsyncKeyState(VK_NUMPAD8))
+		{
+			zNear += 0.01f;
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease ZNear
+		else if (GetAsyncKeyState(VK_NUMPAD2))
+		{
+			zNear -= 0.01f;
+			if (zNear <= 0)
+			{
+				zNear = 0.01f;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Increase ZFar
+		if (GetAsyncKeyState(VK_NUMPAD6))
+		{
+			zFar += 0.01f;
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+		//Decrease ZFar
+		else if (GetAsyncKeyState(VK_NUMPAD4))
+		{
+			zFar -= 0.01f;
+			if (zFar < zNear)
+			{
+				zFar = zNear + 0.01f;
+			}
+			UpdateProjection(_d3d, projectionMatrix);
+		}
+	};
 
 	~Renderer()
 	{

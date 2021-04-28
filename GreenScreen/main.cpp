@@ -43,8 +43,6 @@ int main()
 		if (+d3d11.Create(win, GW::GRAPHICS::DEPTH_BUFFER_SUPPORT))
 		{
 			Renderer renderer(win, d3d11);
-			unsigned int windowHeight = 0; 
-			unsigned int windowWidth = 0; 
 			// main loop (runs until window is closed)
 			while (+win.ProcessWindowEvents())
 			{
@@ -55,45 +53,11 @@ int main()
 				{
 					pDeviceContext->ClearRenderTargetView(pTargetView, clr);
 					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
-					renderer.DrawSkyBox();
-					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
+					/*renderer.DrawSkyBox();
+					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);*/
 					renderer.Update();
 					renderer.Render();
 					pSwapChain->Present(1, 0);
-
-					/*D3D11_VIEWPORT viewportOne;
-					win.GetHeight(windowHeight);
-					win.GetWidth(windowWidth);
-					viewportOne.Width = windowWidth ;
-					viewportOne.Height = windowHeight;
-					viewportOne.MinDepth = 0.0f;
-					viewportOne.MaxDepth = 1.0f;*/
-
-					unsigned int topLX = 0;
-					unsigned int topLY = 0;
-					win.GetClientTopLeft(topLX, topLY);
-
-					/*viewportOne.TopLeftX = (float)topLX;
-					viewportOne.TopLeftY = (float)topLY;
-					pDeviceContext->RSSetViewports(1, &viewportOne);*/
-
-					D3D11_VIEWPORT viewportTwo;
-					win.GetHeight(windowHeight);
-					win.GetWidth(windowWidth);
-					viewportTwo.Width = windowWidth;
-					viewportTwo.Height = windowHeight;
-					viewportTwo.MinDepth = 0.0f;
-					viewportTwo.MaxDepth = 1.0f;
-
-					topLX = windowWidth;
-					topLY = 0;
-
-					viewportTwo.TopLeftX = (float)topLX;
-					viewportTwo.TopLeftY = (float)topLY;
-
-					/*UpdateProjectionMatrix(d3d11, &projectionMatrix);*/
-					pDeviceContext->RSSetViewports(1, &viewportTwo);
-
 					//release incremented COM reference counts
 					CleanUp();
 				}
