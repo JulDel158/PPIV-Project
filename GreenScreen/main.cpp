@@ -12,7 +12,6 @@
 // With what we want & what we don't defined we can include the API
 #include "../Gateware/Gateware.h"
 #include "renderer.h" // example rendering code (not Gateware code!)
-
 // open some namespaces to compact the code a bit
 using namespace GW;
 using namespace CORE;
@@ -54,12 +53,12 @@ int main()
 				{
 					pDeviceContext->ClearRenderTargetView(pTargetView, clr);
 					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
-					renderer.DrawSkyBox();
-					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
+					/*renderer.DrawSkyBox();
+					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);*/
 					renderer.Update();
 					renderer.Render();
 					pSwapChain->Present(1, 0);
-					// release incremented COM reference counts
+					//release incremented COM reference counts
 					CleanUp();
 				}
 			}
