@@ -1,4 +1,3 @@
-
 // Simple Vertex Shader
 
 // by default HLSL is COLUMN major

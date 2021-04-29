@@ -38,6 +38,8 @@ public:
 	//Shaders
 	Microsoft::WRL::ComPtr<ID3D11VertexShader>	vShader = nullptr;
 	Microsoft::WRL::ComPtr<ID3D11PixelShader>	pShader = nullptr;
+	Microsoft::WRL::ComPtr<ID3D11GeometryShader> gShader = nullptr;
+
 	Microsoft::WRL::ComPtr<ID3D11InputLayout>	inputLayout = nullptr;
 	Microsoft::WRL::ComPtr<ID3D11Buffer>		constantBuffer = nullptr;
 
@@ -82,6 +84,11 @@ public:
 			device->CreateBuffer(&iDesc, &iData, indexBuffer.ReleaseAndGetAddressOf());
 		}
 	}
+
+	void CreateGeometryShader(ID3D11Device* device, const BYTE* geometryShader, SIZE_T gByteLength) {
+		device->CreateGeometryShader(geometryShader, gByteLength, nullptr, gShader.ReleaseAndGetAddressOf());
+	}
+
 
 	void CreateTextureandSampler(ID3D11Device* device, std::string filename)
 	{
@@ -132,12 +139,18 @@ public:
 			dContext->PSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
 		}
 
+		if (gShader) {
+			dContext->GSSetConstantBuffers(0, 1, constantBuffer.GetAddressOf());
+		}
+
 		if (inputLayout)
 			dContext->IASetInputLayout(inputLayout.Get());
 		if (vShader)
 			dContext->VSSetShader(vShader.Get(), nullptr, 0);
 		if(pShader)
 			dContext->PSSetShader(pShader.Get(), nullptr, 0);
+		if (gShader)
+			dContext->GSSetShader(gShader.Get(), NULL, 0);
 		if(sResourceView)
 			dContext->PSSetShaderResources(0, 1, sResourceView.GetAddressOf());
 		if(samplerState)
@@ -155,6 +168,14 @@ public:
 
 		dContext->IASetPrimitiveTopology(primitiveTopology);
 	}
+
+
+
+	void UnBind(ID3D11DeviceContext* dContext) {
+		if (gShader)
+			dContext->GSSetShader(nullptr, nullptr, 0);
+	}
+
 
 	//Draws object (must bind first)
 	void Draw(ID3D11DeviceContext* dContext)

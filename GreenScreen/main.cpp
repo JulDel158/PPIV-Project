@@ -43,6 +43,7 @@ int main()
 		if (+d3d11.Create(win, GW::GRAPHICS::DEPTH_BUFFER_SUPPORT))
 		{
 			Renderer renderer(win, d3d11);
+			renderer.CreateSeaweed();
 			// main loop (runs until window is closed)
 			while (+win.ProcessWindowEvents())
 			{
@@ -55,6 +56,7 @@ int main()
 					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);
 					/*renderer.DrawSkyBox();
 					pDeviceContext->ClearDepthStencilView(pDepth, D3D11_CLEAR_DEPTH, 1, 0);*/
+					
 					renderer.Update();
 					renderer.Render();
 					pSwapChain->Present(1, 0);
