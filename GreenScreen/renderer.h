@@ -12,7 +12,6 @@
 #include "SeaweedVertex.h"
 #include "GeometryShader.h"
 #include "Renderable.h"
-#include "CUBE.h"
 #include "uploads_files_737265_1.h"
 #include "Wave_VS.h"
 #include "Cannon.h"
