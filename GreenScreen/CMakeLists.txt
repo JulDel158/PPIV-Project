@@ -35,14 +35,10 @@ add_executable (GreenScreen
 	# Header & CPP files go here
 	main.cpp
 	renderer.h
-	test_pyramid.h	
 	SharedDefines.h
 	Renderable.h
 	DDSTextureLoader.cpp
 	DDSTextureLoader.h
-	axe1.h
-	axe2.h
-	CUBE.h
         uploads_files_737265_1.h
 	Cannon.h
 	lh2.h
